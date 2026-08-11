@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "272750034054",
+    "project_id": "used-mobil-phone",
+    "storage_bucket": "used-mobil-phone.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:272750034054:android:90e0ce456dfe94f0d62507",
+        "android_client_info": {
+          "package_name": "com.example.mobile_shop"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyALQjKEnevAMWW8zmb0Nh4MEar6TPvzuEA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
