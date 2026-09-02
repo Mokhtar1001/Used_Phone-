@@ -1,6 +1,6 @@
 {
-    "name": "mobile_shop",
-    "short_name": "mobile_shop",
+    "name": "Merchant",
+    "short_name": "Merchant",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
@@ -33,3 +33,4 @@
         }
     ]
 }
+

@@ -57,7 +57,9 @@ class _AdminChatsScreenState extends State<AdminChatsScreen> {
                       return ListTile(
                         leading: CircleAvatar(
                           backgroundImage: chat.productImage != null ? CachedNetworkImageProvider(chat.productImage!) : null,
-                          child: chat.productImage == null ? const Icon(Icons.phone_android) : null,
+                          child: chat.productImage == null
+                              ? Icon(chat.isGeneral ? Icons.support_agent_rounded : Icons.phone_android)
+                              : null,
                         ),
                         title: Text(chat.productName(isArabic)),
                         subtitle: Text(

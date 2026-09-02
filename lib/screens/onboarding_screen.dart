@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/locale_provider.dart';
 import '../core/theme.dart';
-import 'welcome_screen.dart';
 
 class _OnboardData {
   final IconData icon;
@@ -14,7 +13,14 @@ class _OnboardData {
 /// شاشات ترحيب متحركة بالسحب، بنفس نمط onboarding بتاع template "Shoplon"
 /// (نقط تحت + زرار دائري بسهم يودي للصفحة اللي بعدها)
 class OnboardingScreen extends StatefulWidget {
-  const OnboardingScreen({super.key});
+  /// بيتنادى لما اليوزر يخلص/يتخطى الـ onboarding.
+  /// مبنستخدمش Navigator هنا عشان OnboardingScreen مش route مستقل،
+  /// هو بس widget بيتعرض جوه route RootScreen الوحيد.
+  /// لو عملنا pushReplacement هنا، هنمسح RootScreen من الـ Navigator خالص
+  /// وهيبوظ كل التوجيه اللي بيحصل بعد تسجيل الدخول.
+  final VoidCallback onFinished;
+
+  const OnboardingScreen({super.key, required this.onFinished});
 
   @override
   State<OnboardingScreen> createState() => _OnboardingScreenState();
@@ -52,7 +58,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('onboarding_seen', true);
     if (mounted) {
-      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const WelcomeScreen()));
+      widget.onFinished();
     }
   }
 

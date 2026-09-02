@@ -10,6 +10,7 @@ import '../../models/product.dart';
 import '../../models/review.dart';
 import '../../providers/locale_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/guest_guard.dart';
 import 'chat_screen.dart';
 import 'checkout_screen.dart';
 
@@ -73,10 +74,17 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   }
 
   Future<void> _toggleFavorite() async {
+    if (!await requireLogin(
+      context,
+      messageAr: 'محتاج تسجل دخول عشان تضيف المنتج للمفضلة',
+      messageEn: 'You need to log in to add this to favorites',
+    )) return;
+    if (!mounted) return;
+
     final userId = context.read<AuthProvider>().profile?.id;
     if (userId == null) return;
     final newState = await _favoritesService.toggleFavorite(userId, widget.productId);
-    setState(() => _isFavorite = newState);
+    if (mounted) setState(() => _isFavorite = newState);
   }
 
   Future<void> _share() async {
@@ -89,6 +97,13 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   }
 
   Future<void> _startChat() async {
+    if (!await requireLogin(
+      context,
+      messageAr: 'محتاج تسجل دخول عشان تبدأ محادثة مع البائع',
+      messageEn: 'You need to log in to start a chat with the seller',
+    )) return;
+    if (!mounted) return;
+
     setState(() => _isStartingChat = true);
     final auth = context.read<AuthProvider>();
     final customerId = auth.profile?.id;
@@ -324,7 +339,11 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
               if (product.status != 'sold')
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => CheckoutScreen(product: product))),
+                    onPressed: () async {
+                      if (!await requireLogin(context)) return;
+                      if (!context.mounted) return;
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => CheckoutScreen(product: product)));
+                    },
                     icon: const Icon(Icons.credit_card, size: 18),
                     label: Text(isArabic ? 'شراء' : 'Buy'),
                   ),

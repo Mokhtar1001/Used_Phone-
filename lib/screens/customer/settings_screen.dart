@@ -8,6 +8,8 @@ import '../../core/theme.dart';
 import 'edit_profile_screen.dart';
 import 'favorites_screen.dart';
 import 'notifications_screen.dart';
+import 'loyalty_screen.dart';
+import 'my_inspection_requests_screen.dart';
 
 /// شاشة إعدادات بستايل "Profile" بتاع template Shoplon:
 /// كارت بروفايل فوق + أقسام معنونة (الحساب، التخصيص، الإعدادات)
@@ -64,6 +66,18 @@ class SettingsScreen extends StatelessWidget {
                   icon: Icons.person_outline,
                   text: isArabic ? 'تعديل البيانات الشخصية' : 'Edit Profile',
                   onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const EditProfileScreen())),
+                ),
+                const Divider(height: 1),
+                _SettingsTile(
+                  icon: Icons.card_giftcard_outlined,
+                  text: isArabic ? 'نقاط الولاء' : 'Loyalty Points',
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LoyaltyScreen())),
+                ),
+                const Divider(height: 1),
+                _SettingsTile(
+                  icon: Icons.fact_check_outlined,
+                  text: isArabic ? 'طلبات الفحص الفني' : 'Inspection Requests',
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MyInspectionRequestsScreen())),
                 ),
               ],
             ),

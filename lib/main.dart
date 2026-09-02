@@ -11,6 +11,7 @@ import 'providers/auth_provider.dart';
 import 'providers/theme_provider.dart';
 import 'providers/locale_provider.dart';
 import 'providers/product_provider.dart';
+import 'providers/compare_provider.dart';
 import 'services/notification_service.dart';
 import 'screens/root_screen.dart';
 import 'l10n/app_localizations.dart';
@@ -49,11 +50,12 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => LocaleProvider()),
         ChangeNotifierProvider(create: (_) => ProductProvider()),
+        ChangeNotifierProvider(create: (_) => CompareProvider()),
       ],
       child: Consumer2<ThemeProvider, LocaleProvider>(
         builder: (context, themeProvider, localeProvider, _) {
           return MaterialApp(
-            title: 'Used Phones Store',
+            title: 'Merchant',
             debugShowCheckedModeBanner: false,
             themeMode: themeProvider.themeMode,
             theme: AppTheme.light,

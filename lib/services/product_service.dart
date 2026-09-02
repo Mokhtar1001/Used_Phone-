@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 import '../models/product.dart';
@@ -93,12 +93,17 @@ class ProductService {
   }
 
   // ---------- IMAGES ----------
-  Future<String> uploadProductImage(String productId, File file) async {
-    final fileExt = file.path.split('.').last;
+  Future<String> uploadProductImage(String productId, XFile file) async {
+    final fileExt = file.name.contains('.') ? file.name.split('.').last : 'jpg';
     final fileName = '${_uuid.v4()}.$fileExt';
     final path = '$productId/$fileName';
+    final bytes = await file.readAsBytes();
 
-    await _client.storage.from(AppConstants.productImagesBucket).upload(path, file);
+    await _client.storage.from(AppConstants.productImagesBucket).uploadBinary(
+          path,
+          bytes,
+          fileOptions: FileOptions(contentType: file.mimeType ?? 'image/jpeg'),
+        );
     final publicUrl = _client.storage.from(AppConstants.productImagesBucket).getPublicUrl(path);
 
     await _client.from('product_images').insert({
@@ -113,3 +118,5 @@ class ProductService {
     await _client.from('product_images').delete().eq('id', imageId);
   }
 }
+
+

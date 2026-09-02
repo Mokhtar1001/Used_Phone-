@@ -34,6 +34,11 @@ class _OrdersScreenState extends State<OrdersScreen> {
     });
   }
 
+  Future<void> _updateStatus(String orderId, String newStatus) async {
+    await _client.from('orders').update({'status': newStatus}).eq('id', orderId);
+    _load();
+  }
+
   Color _statusColor(String status) {
     switch (status) {
       case 'paid':
@@ -80,12 +85,29 @@ class _OrdersScreenState extends State<OrdersScreen> {
                               ),
                               Container(
                                 margin: const EdgeInsets.only(top: 4),
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: _statusColor(status).withValues(alpha: 0.15),
-                                  borderRadius: BorderRadius.circular(6),
+                                child: PopupMenuButton<String>(
+                                  onSelected: (v) => _updateStatus(order['id'], v),
+                                  itemBuilder: (context) => [
+                                    PopupMenuItem(value: 'pending', child: Text(isArabic ? 'قيد الانتظار' : 'Pending')),
+                                    PopupMenuItem(value: 'paid', child: Text(isArabic ? 'تم الدفع' : 'Paid')),
+                                    PopupMenuItem(value: 'failed', child: Text(isArabic ? 'فشل' : 'Failed')),
+                                  ],
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: _statusColor(status).withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(status, style: TextStyle(color: _statusColor(status), fontSize: 11)),
+                                        const SizedBox(width: 2),
+                                        Icon(Icons.arrow_drop_down, size: 14, color: _statusColor(status)),
+                                      ],
+                                    ),
+                                  ),
                                 ),
-                                child: Text(status, style: TextStyle(color: _statusColor(status), fontSize: 11)),
                               ),
                             ],
                           ),

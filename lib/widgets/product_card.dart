@@ -9,12 +9,18 @@ class ProductCard extends StatelessWidget {
   final Product product;
   final bool isArabic;
   final VoidCallback onTap;
+  final bool showCompare;
+  final bool isCompareSelected;
+  final VoidCallback? onCompareToggle;
 
   const ProductCard({
     super.key,
     required this.product,
     required this.isArabic,
     required this.onTap,
+    this.showCompare = false,
+    this.isCompareSelected = false,
+    this.onCompareToggle,
   });
 
   @override
@@ -65,6 +71,27 @@ class ProductCard extends StatelessWidget {
                         child: Text(
                           isSold ? (isArabic ? 'تم البيع' : 'Sold') : (isArabic ? 'محجوز' : 'Reserved'),
                           style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ),
+                  ),
+                // زرار إضافة للمقارنة
+                if (showCompare)
+                  Positioned(
+                    left: 6,
+                    top: 6,
+                    child: GestureDetector(
+                      onTap: onCompareToggle,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: isCompareSelected ? AppTheme.primaryColor : Colors.white.withValues(alpha: 0.9),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          isCompareSelected ? Icons.check : Icons.compare_arrows,
+                          size: 14,
+                          color: isCompareSelected ? Colors.white : AppTheme.blackColor60,
                         ),
                       ),
                     ),

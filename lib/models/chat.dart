@@ -1,6 +1,6 @@
 class ChatModel {
   final String id;
-  final String productId;
+  final String? productId; // null = شات عام (استفسار عام مش مربوط بمنتج)
   final String customerId;
   final DateTime lastMessageAt;
   final DateTime createdAt;
@@ -14,7 +14,7 @@ class ChatModel {
 
   ChatModel({
     required this.id,
-    required this.productId,
+    this.productId,
     required this.customerId,
     required this.lastMessageAt,
     required this.createdAt,
@@ -26,8 +26,12 @@ class ChatModel {
     this.unreadCount = 0,
   });
 
-  String productName(bool isArabic) =>
-      (isArabic ? productNameAr : productNameEn) ?? '';
+  bool get isGeneral => productId == null;
+
+  String productName(bool isArabic) {
+    if (isGeneral) return isArabic ? 'استفسار عام' : 'General Inquiry';
+    return (isArabic ? productNameAr : productNameEn) ?? '';
+  }
 
   factory ChatModel.fromJson(Map<String, dynamic> json) {
     final product = json['products'];

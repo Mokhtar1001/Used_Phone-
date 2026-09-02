@@ -37,6 +37,35 @@ class ChatService {
     return created['id'] as String;
   }
 
+  /// يبحث عن "شات عام" (استفسار عام مش مربوط بمنتج) بين العميل والأدمن،
+  /// لو مش موجود يعمل واحد جديد. العميل عنده شات عام واحد بس دايمًا (زي واتساب الدعم).
+  /// ده اللي بيتنفذ لما العميل يدوس "تواصل مع الدعم" من شاشة "محادثاتي".
+  Future<String> getOrCreateGeneralChat({
+    required String customerId,
+  }) async {
+    final existing = await _client
+        .from('chats')
+        .select('id')
+        .isFilter('product_id', null)
+        .eq('customer_id', customerId)
+        .maybeSingle();
+
+    if (existing != null) {
+      return existing['id'] as String;
+    }
+
+    final created = await _client
+        .from('chats')
+        .insert({
+          'product_id': null,
+          'customer_id': customerId,
+        })
+        .select('id')
+        .single();
+
+    return created['id'] as String;
+  }
+
   /// شاتات العميل نفسه (مع عداد الرسايل الغير مقروءة)
   Future<List<ChatModel>> getMyChats(String customerId) async {
     final data = await _client

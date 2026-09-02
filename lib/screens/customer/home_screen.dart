@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/product_provider.dart';
 import '../../providers/locale_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../widgets/product_card.dart';
 import '../../core/theme.dart';
+import '../../widgets/modern_nav_bar.dart';
+import '../../widgets/guest_guard.dart';
+import '../auth/login_screen.dart';
 import 'product_details_screen.dart';
 import 'my_chats_screen.dart';
 import 'settings_screen.dart';
@@ -33,22 +37,23 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final isArabic = context.watch<LocaleProvider>().isArabic;
+    final isGuest = !context.watch<AuthProvider>().isLoggedIn;
 
     final pages = [
       _ProductsTab(isArabic: isArabic),
-      const MyChatsScreen(),
-      const SettingsScreen(),
+      isGuest ? _GuestTabPrompt(isArabic: isArabic) : const MyChatsScreen(),
+      isGuest ? _GuestTabPrompt(isArabic: isArabic) : const SettingsScreen(),
     ];
 
     return Scaffold(
       body: pages[_tabIndex],
-      bottomNavigationBar: NavigationBar(
+      bottomNavigationBar: ModernNavBar(
         selectedIndex: _tabIndex,
         onDestinationSelected: (i) => setState(() => _tabIndex = i),
-        destinations: [
-          NavigationDestination(icon: const Icon(Icons.storefront_outlined), selectedIcon: const Icon(Icons.storefront), label: isArabic ? 'الرئيسية' : 'Home'),
-          NavigationDestination(icon: const Icon(Icons.chat_bubble_outline), selectedIcon: const Icon(Icons.chat_bubble), label: isArabic ? 'محادثاتي' : 'Chats'),
-          NavigationDestination(icon: const Icon(Icons.settings_outlined), selectedIcon: const Icon(Icons.settings), label: isArabic ? 'الإعدادات' : 'Settings'),
+        items: [
+          ModernNavItem(icon: Icons.storefront_outlined, selectedIcon: Icons.storefront, label: isArabic ? 'الرئيسية' : 'Home'),
+          ModernNavItem(icon: Icons.chat_bubble_outline, selectedIcon: Icons.chat_bubble, label: isArabic ? 'محادثاتي' : 'Chats'),
+          ModernNavItem(icon: Icons.settings_outlined, selectedIcon: Icons.settings, label: isArabic ? 'الإعدادات' : 'Settings'),
         ],
       ),
     );
@@ -302,6 +307,48 @@ class _CategoryChip extends StatelessWidget {
       label: Text(label),
       selected: selected,
       onSelected: (_) => onTap(),
+    );
+  }
+}
+
+/// بتظهر مكان تبويب "محادثاتي" أو "الإعدادات" لما اليوزر يكون Guest
+/// (وضع تصفح المنتجات من غير تسجيل دخول على الويب)
+class _GuestTabPrompt extends StatelessWidget {
+  final bool isArabic;
+  const _GuestTabPrompt({required this.isArabic});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.person_outline_rounded, size: 56, color: AppTheme.blackColor40),
+              const SizedBox(height: 16),
+              Text(
+                isArabic ? 'سجّل دخولك عشان تشوف ده' : 'Log in to see this',
+                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                isArabic
+                    ? 'محادثاتك وإعداداتك بتتحفظ مع حسابك، سجّل دخول أو اعمل حساب جديد'
+                    : 'Your chats and settings are tied to your account. Log in or create one.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey.shade600),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen())),
+                child: Text(isArabic ? 'تسجيل الدخول' : 'Log in'),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

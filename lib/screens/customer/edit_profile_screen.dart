@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
@@ -24,7 +24,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   late TextEditingController _nameController;
   late TextEditingController _phoneController;
-  File? _newAvatar;
+  XFile? _newAvatar;
+  Uint8List? _newAvatarBytes;
   bool _isSaving = false;
 
   @override
@@ -39,7 +40,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final picker = ImagePicker();
     final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80, maxWidth: 512);
     if (picked != null) {
-      setState(() => _newAvatar = File(picked.path));
+      final bytes = await picked.readAsBytes();
+      setState(() {
+        _newAvatar = picked;
+        _newAvatarBytes = bytes;
+      });
     }
   }
 
@@ -48,15 +53,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     setState(() => _isSaving = true);
 
     String? avatarUrl;
-    if (_newAvatar != null) {
+    if (_newAvatar != null && _newAvatarBytes != null) {
       try {
         final profileId = context.read<AuthProvider>().profile?.id;
         final fileName = '${_uuid.v4()}.jpg';
         final path = '$profileId/$fileName'; // أول جزء لازم يكون الـ user id بالظبط عشان الـ RLS تسمح بالرفع
-        await _client.storage.from('avatars').upload(
+        await _client.storage.from('avatars').uploadBinary(
               path,
-              _newAvatar!,
-              fileOptions: const FileOptions(upsert: true),
+              _newAvatarBytes!,
+              fileOptions: FileOptions(upsert: true, contentType: _newAvatar!.mimeType ?? 'image/jpeg'),
             );
         avatarUrl = _client.storage.from('avatars').getPublicUrl(path);
       } catch (e) {
@@ -114,10 +119,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     CircleAvatar(
                       radius: 50,
                       backgroundColor: const Color(0xFFF2F2F3),
-                      backgroundImage: _newAvatar != null
-                          ? FileImage(_newAvatar!) as ImageProvider
+                      backgroundImage: _newAvatarBytes != null
+                          ? MemoryImage(_newAvatarBytes!) as ImageProvider
                           : (profile?.avatarUrl != null ? CachedNetworkImageProvider(profile!.avatarUrl!) : null),
-                      child: (_newAvatar == null && profile?.avatarUrl == null)
+                      child: (_newAvatarBytes == null && profile?.avatarUrl == null)
                           ? const Icon(Icons.person, size: 44, color: Colors.black38)
                           : null,
                     ),

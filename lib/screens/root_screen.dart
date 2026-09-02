@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -38,8 +39,16 @@ class _RootScreenState extends State<RootScreen> {
     }
 
     if (!auth.isLoggedIn || auth.profile == null) {
+      // على الويب بس: اسمح بتصفح المنتجات من غير ما نجبره يسجل دخول -
+      // الأكشنز اللي محتاجة حساب (مفضلة/شات/شراء) بتطلب تسجيل دخول لحظة ما يستخدمها بس
+      if (kIsWeb && !auth.isLoggedIn && _onboardingSeen!) {
+        return const HomeScreen();
+      }
+
       // أول مرة يفتح التطبيق -> يشوف شاشات الترحيب المتحركة، وبعدها كل مرة يروح على طول لشاشة تسجيل الدخول
-      return _onboardingSeen! ? const WelcomeScreen() : const OnboardingScreen();
+      return _onboardingSeen!
+          ? const WelcomeScreen()
+          : OnboardingScreen(onFinished: () => setState(() => _onboardingSeen = true));
     }
 
     // التوجيه حسب الدور: أدمن يروح للوحة التحكم، عميل عادي يروح للواجهة الرئيسية

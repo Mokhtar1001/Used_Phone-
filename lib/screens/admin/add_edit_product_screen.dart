@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
@@ -7,6 +7,14 @@ import '../../services/product_service.dart';
 import '../../models/product.dart';
 import '../../models/category.dart';
 import '../../providers/locale_provider.dart';
+
+/// يخزن الملف المختار مع الـ bytes بتاعته مع بعض - عشان نقرأ الملف مرة واحدة بس
+/// ونستخدمه في المعاينة (Image.memory) والرفع، بطريقة شغالة على كل المنصات (موبايل وويب)
+class _PickedImage {
+  final XFile file;
+  final Uint8List bytes;
+  _PickedImage(this.file, this.bytes);
+}
 
 class AddEditProductScreen extends StatefulWidget {
   final String? productId;
@@ -33,7 +41,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   String _condition = 'good';
   List<ProductCategory> _categories = [];
   List<String> _existingImages = [];
-  final List<File> _newImages = [];
+  final List<_PickedImage> _newImages = [];
   bool _isSaving = false;
   bool get _isEditing => widget.productId != null;
 
@@ -70,7 +78,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     final picker = ImagePicker();
     final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
     if (picked != null) {
-      setState(() => _newImages.add(File(picked.path)));
+      final bytes = await picked.readAsBytes();
+      setState(() => _newImages.add(_PickedImage(picked, bytes)));
     }
   }
 
@@ -122,7 +131,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     }
 
     for (final image in _newImages) {
-      await _service.uploadProductImage(productId, image);
+      await _service.uploadProductImage(productId, image.file);
     }
 
     setState(() => _isSaving = false);
@@ -155,11 +164,11 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                             child: CachedNetworkImage(imageUrl: url, width: 100, height: 100, fit: BoxFit.cover),
                           ),
                         )),
-                    ..._newImages.map((file) => Padding(
+                    ..._newImages.map((img) => Padding(
                           padding: const EdgeInsets.only(right: 8),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(8),
-                            child: Image.file(file, width: 100, height: 100, fit: BoxFit.cover),
+                            child: Image.memory(img.bytes, width: 100, height: 100, fit: BoxFit.cover),
                           ),
                         )),
                     InkWell(

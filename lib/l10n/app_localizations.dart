@@ -6,8 +6,6 @@
 // حتى قبل أول build.
 
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
-import 'dart:convert';
 
 class AppLocalizations {
   final Locale locale;
@@ -21,12 +19,12 @@ class AppLocalizations {
 
   static const Map<String, Map<String, String>> _localizedValues = {
     'ar': {
-      'appTitle': 'محل الموبيلات المستعملة',
+      'appTitle': 'ميرشانت',
       'login': 'تسجيل الدخول',
       'signup': 'إنشاء حساب',
     },
     'en': {
-      'appTitle': 'Used Phones Store',
+      'appTitle': 'Merchant',
       'login': 'Login',
       'signup': 'Sign Up',
     },
