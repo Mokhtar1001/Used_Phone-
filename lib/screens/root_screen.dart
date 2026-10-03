@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/auth_provider.dart';
+import '../services/visit_service.dart';
 import 'onboarding_screen.dart';
 import 'welcome_screen.dart';
 import 'customer/home_screen.dart';
@@ -22,6 +23,7 @@ class _RootScreenState extends State<RootScreen> {
   void initState() {
     super.initState();
     _checkOnboarding();
+    VisitService().logVisit(); // بتتسجل مرة واحدة بس لكل فتحة للتطبيق/الموقع
   }
 
   Future<void> _checkOnboarding() async {

@@ -39,6 +39,34 @@ class Product {
   String description(bool isArabic) => (isArabic ? descriptionAr : descriptionEn) ?? '';
   String get mainImage => images.isNotEmpty ? images.first : '';
 
+  /// تحويل الـ condition (excellent/good/fair) لحرف Grade مختصر (A/B/C) لعرضه في البادچ
+  String? get gradeLetter {
+    switch (condition) {
+      case 'excellent':
+        return 'A';
+      case 'good':
+        return 'B';
+      case 'fair':
+        return 'C';
+      default:
+        return condition != null && condition!.isNotEmpty ? condition![0].toUpperCase() : null;
+    }
+  }
+
+  /// الاسم المعروض للحالة بالكامل (للفلاتر وتفاصيل المنتج)
+  String conditionLabel(bool isArabic) {
+    switch (condition) {
+      case 'excellent':
+        return isArabic ? 'ممتازة (Grade A)' : 'Excellent (Grade A)';
+      case 'good':
+        return isArabic ? 'جيدة (Grade B)' : 'Good (Grade B)';
+      case 'fair':
+        return isArabic ? 'مقبولة (Grade C)' : 'Fair (Grade C)';
+      default:
+        return condition ?? '';
+    }
+  }
+
   factory Product.fromJson(Map<String, dynamic> json) {
     final imagesJson = json['product_images'] as List<dynamic>? ?? [];
     final images = imagesJson.map((e) => e['image_url'] as String).toList();

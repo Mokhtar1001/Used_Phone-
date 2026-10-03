@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/product_provider.dart';
 import '../../providers/locale_provider.dart';
+import '../../core/responsive.dart';
 import '../../widgets/product_card.dart';
 import '../customer/product_details_screen.dart';
 import 'add_edit_product_screen.dart';
@@ -64,69 +65,79 @@ class _AdminProductsScreenState extends State<AdminProductsScreen> {
               ? Center(child: Text(isArabic ? 'لا يوجد منتجات - أضف أول منتج' : 'No products yet - add your first one'))
               : RefreshIndicator(
                   onRefresh: () => context.read<ProductProvider>().loadProducts(),
-                  child: GridView.builder(
-                    padding: const EdgeInsets.all(16),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      childAspectRatio: 0.68,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                    ),
-                    itemCount: productProvider.products.length,
-                    itemBuilder: (context, i) {
-                      final product = productProvider.products[i];
-                      return Stack(
-                        children: [
-                          ProductCard(
-                            product: product,
-                            isArabic: isArabic,
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => ProductDetailsScreen(productId: product.id)),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: Responsive.maxContentWidth),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final columns = Responsive.productGridColumns(constraints.maxWidth);
+                          return GridView.builder(
+                            padding: const EdgeInsets.all(16),
+                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: columns,
+                              childAspectRatio: 0.68,
+                              crossAxisSpacing: 12,
+                              mainAxisSpacing: 12,
                             ),
-                          ),
-                          // زرار واضح (⋮) للتعديل/الحذف - بدل ما يبقى مخفي جوه ضغطة مطولة
-                          // Badge عدد المشاهدات - Analytics بسيطة للأدمن
-                          Positioned(
-                            bottom: 44,
-                            left: isArabic ? null : 6,
-                            right: isArabic ? 6 : null,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: Colors.black.withValues(alpha: 0.6),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
+                            itemCount: productProvider.products.length,
+                            itemBuilder: (context, i) {
+                              final product = productProvider.products[i];
+                              return Stack(
                                 children: [
-                                  const Icon(Icons.remove_red_eye_outlined, size: 11, color: Colors.white),
-                                  const SizedBox(width: 3),
-                                  Text('${product.viewsCount}', style: const TextStyle(color: Colors.white, fontSize: 10)),
+                                  ProductCard(
+                                    product: product,
+                                    isArabic: isArabic,
+                                    onTap: () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(builder: (_) => ProductDetailsScreen(productId: product.id)),
+                                    ),
+                                  ),
+                                  // زرار واضح (⋮) للتعديل/الحذف - بدل ما يبقى مخفي جوه ضغطة مطولة
+                                  // Badge عدد المشاهدات - Analytics بسيطة للأدمن
+                                  Positioned(
+                                    bottom: 44,
+                                    left: isArabic ? null : 6,
+                                    right: isArabic ? 6 : null,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withValues(alpha: 0.6),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const Icon(Icons.remove_red_eye_outlined, size: 11, color: Colors.white),
+                                          const SizedBox(width: 3),
+                                          Text('${product.viewsCount}', style: const TextStyle(color: Colors.white, fontSize: 10)),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    top: 4,
+                                    right: isArabic ? null : 4,
+                                    left: isArabic ? 4 : null,
+                                    child: Material(
+                                      color: Colors.black.withValues(alpha: 0.55),
+                                      shape: const CircleBorder(),
+                                      child: InkWell(
+                                        customBorder: const CircleBorder(),
+                                        onTap: () => _showActions(context, product.id, isArabic),
+                                        child: const Padding(
+                                          padding: EdgeInsets.all(6),
+                                          child: Icon(Icons.more_vert, color: Colors.white, size: 18),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
                                 ],
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            top: 4,
-                            right: isArabic ? null : 4,
-                            left: isArabic ? 4 : null,
-                            child: Material(
-                              color: Colors.black.withValues(alpha: 0.55),
-                              shape: const CircleBorder(),
-                              child: InkWell(
-                                customBorder: const CircleBorder(),
-                                onTap: () => _showActions(context, product.id, isArabic),
-                                child: const Padding(
-                                  padding: EdgeInsets.all(6),
-                                  child: Icon(Icons.more_vert, color: Colors.white, size: 18),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      );
-                    },
+                              );
+                            },
+                          );
+                        },
+                      ),
+                    ),
                   ),
                 ),
       floatingActionButton: FloatingActionButton.extended(

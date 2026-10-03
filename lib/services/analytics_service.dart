@@ -57,4 +57,51 @@ class AnalyticsService {
     final data = await _client.from('products').select('id').eq('status', 'sold').count(CountOption.exact);
     return data.count;
   }
+
+  /// عدد المنتجات حسب الحالة (متاح/محجوز/مباع) - لكروت الداشبورد
+  Future<Map<String, int>> getProductStatusCounts() async {
+    final available = await _client.from('products').select('id').eq('status', 'available').count(CountOption.exact);
+    final reserved = await _client.from('products').select('id').eq('status', 'reserved').count(CountOption.exact);
+    final sold = await _client.from('products').select('id').eq('status', 'sold').count(CountOption.exact);
+    return {
+      'available': available.count,
+      'reserved': reserved.count,
+      'sold': sold.count,
+      'total': available.count + reserved.count + sold.count,
+    };
+  }
+
+  /// عدد الطلبات اللي لسه محتاجة متابعة (pending)
+  Future<int> getPendingOrdersCount() async {
+    final data = await _client.from('orders').select('id').eq('status', 'pending').count(CountOption.exact);
+    return data.count;
+  }
+
+  /// عدد طلبات الفحص الفني اللي لسه محتاجة رد (status = pending)
+  Future<int> getPendingInspectionCount() async {
+    final data = await _client.from('inspection_requests').select('id').eq('status', 'pending').count(CountOption.exact);
+    return data.count;
+  }
+
+  /// عدد الزيارات الكلي من أول ما بدأنا نسجل (site_visits)
+  Future<int> getTotalVisits() async {
+    try {
+      final data = await _client.from('site_visits').select('id').count(CountOption.exact);
+      return data.count;
+    } catch (e) {
+      return 0; // لو الجدول لسه مش متعمول
+    }
+  }
+
+  /// عدد زيارات النهاردة بس
+  Future<int> getTodayVisits() async {
+    try {
+      final startOfDay = DateTime.now().toUtc();
+      final start = DateTime.utc(startOfDay.year, startOfDay.month, startOfDay.day);
+      final data = await _client.from('site_visits').select('id').gte('created_at', start.toIso8601String()).count(CountOption.exact);
+      return data.count;
+    } catch (e) {
+      return 0;
+    }
+  }
 }

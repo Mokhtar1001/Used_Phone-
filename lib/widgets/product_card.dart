@@ -3,8 +3,10 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../models/product.dart';
 import '../core/theme.dart';
 
-/// كارت منتج مأخوذ من ستايل template "Shoplon": صورة بحواف دايرة،
-/// بادچ حالة أعلى يمين، اسم الماركة UPPERCASE صغير، العنوان، والسعر بلون مميز.
+/// كارت المنتج - "Grid Card" حسب برand بوك Merchnt:
+/// صورة بحواف دايرة + Grade chip (بادچ أسود) أعلى يسار،
+/// العنوان (H3 SemiBold)، سطر مواصفات بلون Mid Gray، السعر Bold شاركول،
+/// وسطر توفر بلون دلالي (أخضر/رمادي) - الاستثناء الوحيد من باليتة البراند.
 class ProductCard extends StatelessWidget {
   final Product product;
   final bool isArabic;
@@ -23,18 +25,34 @@ class ProductCard extends StatelessWidget {
     this.onCompareToggle,
   });
 
+  String? get _gradeLabel => product.gradeLetter;
+
+  String get _specLine {
+    final parts = <String>[
+      if (product.brand != null && product.brand!.isNotEmpty) product.brand!,
+      if (product.storage != null && product.storage!.isNotEmpty) product.storage!,
+      if (product.color != null && product.color!.isNotEmpty) product.color!,
+    ];
+    return parts.join(' · ');
+  }
+
   @override
   Widget build(BuildContext context) {
     final isSold = product.status == 'sold';
     final isReserved = product.status == 'reserved';
+    final isAvailable = !isSold && !isReserved;
 
     return OutlinedButton(
       onPressed: onTap,
       style: OutlinedButton.styleFrom(
         padding: const EdgeInsets.all(8),
-        side: const BorderSide(color: AppTheme.blackColor10),
+        side: const BorderSide(color: AppTheme.lightGray),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: AppTheme.pureWhite,
         alignment: Alignment.topLeft,
+      ).copyWith(
+        // الكارت نفسه مش زرار بالمعنى البصري - إلغاء أي حالة hover/pressed تلوّن الخلفية
+        overlayColor: WidgetStateProperty.all(AppTheme.offWhite.withValues(alpha: 0.6)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -49,49 +67,49 @@ class ProductCard extends StatelessWidget {
                         ? CachedNetworkImage(
                             imageUrl: product.mainImage,
                             fit: BoxFit.cover,
-                            placeholder: (c, u) => Container(color: AppTheme.greyBg),
-                            errorWidget: (c, u, e) => const Icon(Icons.phone_android, size: 36),
+                            placeholder: (c, u) => Container(color: AppTheme.offWhite),
+                            errorWidget: (c, u, e) =>
+                                const Icon(Icons.phone_android, size: 36, color: AppTheme.midGray),
                           )
-                        : Container(color: AppTheme.greyBg, child: const Icon(Icons.phone_android, size: 36)),
+                        : Container(
+                            color: AppTheme.offWhite,
+                            child: const Icon(Icons.phone_android, size: 36, color: AppTheme.midGray),
+                          ),
                   ),
                 ),
-                // بادچ الحالة - زي بادچ "% off" بالظبط في التمبلت
-                if (isSold || isReserved)
-                  Positioned(
-                    right: 6,
+                // Grade chip - بادچ أسود دايري أعلى يسار الصورة
+                if (_gradeLabel != null)
+                  PositionedDirectional(
+                    start: 6,
                     top: 6,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      height: 18,
-                      decoration: BoxDecoration(
-                        color: isSold ? AppTheme.errorColor : Colors.orange,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Center(
-                        child: Text(
-                          isSold ? (isArabic ? 'تم البيع' : 'Sold') : (isArabic ? 'محجوز' : 'Reserved'),
-                          style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w600),
-                        ),
+                      width: 22,
+                      height: 22,
+                      alignment: Alignment.center,
+                      decoration: const BoxDecoration(color: AppTheme.charcoal, shape: BoxShape.circle),
+                      child: Text(
+                        _gradeLabel!,
+                        style: const TextStyle(color: AppTheme.pureWhite, fontSize: 11, fontWeight: FontWeight.w700),
                       ),
                     ),
                   ),
-                // زرار إضافة للمقارنة
+                // زرار إضافة للمقارنة - أعلى يمين
                 if (showCompare)
-                  Positioned(
-                    left: 6,
+                  PositionedDirectional(
+                    end: 6,
                     top: 6,
                     child: GestureDetector(
                       onTap: onCompareToggle,
                       child: Container(
                         padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
-                          color: isCompareSelected ? AppTheme.primaryColor : Colors.white.withValues(alpha: 0.9),
+                          color: isCompareSelected ? AppTheme.charcoal : AppTheme.pureWhite.withValues(alpha: 0.92),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
                           isCompareSelected ? Icons.check : Icons.compare_arrows,
                           size: 14,
-                          color: isCompareSelected ? Colors.white : AppTheme.blackColor60,
+                          color: isCompareSelected ? AppTheme.pureWhite : AppTheme.midGray,
                         ),
                       ),
                     ),
@@ -104,22 +122,54 @@ class ProductCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (product.brand != null && product.brand!.isNotEmpty)
-                  Text(
-                    product.brand!.toUpperCase(),
-                    style: const TextStyle(fontSize: 10, color: AppTheme.blackColor40, fontWeight: FontWeight.w500),
-                  ),
-                const SizedBox(height: 4),
+                // العنوان - H3 مصغّر شوية عشان يتناسب مع مساحة الكارت
                 Text(
                   product.name(isArabic),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppTheme.blackColor),
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.charcoal),
                 ),
+                if (_specLine.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    _specLine,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 11, color: AppTheme.midGray, fontWeight: FontWeight.w400),
+                  ),
+                ],
                 const SizedBox(height: 4),
                 Text(
                   '${product.price.toStringAsFixed(0)} ${isArabic ? 'ج.م' : 'EGP'}',
-                  style: const TextStyle(color: AppTheme.priceColor, fontWeight: FontWeight.w600, fontSize: 13),
+                  style: const TextStyle(color: AppTheme.charcoal, fontWeight: FontWeight.w700, fontSize: 15),
+                ),
+                const SizedBox(height: 3),
+                // سطر التوفر - الاستثناء الدلالي الوحيد (أخضر = متاح، رمادي = مش متاح)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: isAvailable ? AppTheme.successColor : AppTheme.midGray,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      isAvailable
+                          ? (isArabic ? 'متاح' : 'In Stock')
+                          : isReserved
+                              ? (isArabic ? 'محجوز' : 'Reserved')
+                              : (isArabic ? 'تم البيع' : 'Sold'),
+                      style: TextStyle(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w500,
+                        color: isAvailable ? AppTheme.successColor : AppTheme.midGray,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

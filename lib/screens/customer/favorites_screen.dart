@@ -4,7 +4,8 @@ import '../../services/favorites_service.dart';
 import '../../models/product.dart';
 import '../../providers/locale_provider.dart';
 import '../../providers/auth_provider.dart';
-import '../../widgets/product_card.dart';
+import '../../core/theme.dart';
+import '../../widgets/product_list_card.dart';
 import 'product_details_screen.dart';
 
 class FavoritesScreen extends StatefulWidget {
@@ -36,6 +37,13 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     });
   }
 
+  Future<void> _removeFavorite(Product product) async {
+    final userId = context.read<AuthProvider>().profile?.id;
+    if (userId == null) return;
+    setState(() => _products.removeWhere((p) => p.id == product.id));
+    await _favoritesService.toggleFavorite(userId, product.id);
+  }
+
   @override
   Widget build(BuildContext context) {
     final isArabic = context.watch<LocaleProvider>().isArabic;
@@ -48,24 +56,23 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             ? const Center(child: CircularProgressIndicator())
             : _products.isEmpty
                 ? Center(child: Text(isArabic ? 'لسه معملتش أي منتج مفضل' : 'No favorites yet'))
-                : GridView.builder(
+                : ListView.separated(
                     padding: const EdgeInsets.all(16),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      childAspectRatio: 0.68,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                    ),
                     itemCount: _products.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
                     itemBuilder: (context, i) {
                       final product = _products[i];
-                      return ProductCard(
+                      return ProductListCard(
                         product: product,
                         isArabic: isArabic,
                         onTap: () async {
                           await Navigator.push(context, MaterialPageRoute(builder: (_) => ProductDetailsScreen(productId: product.id)));
                           _load(); // ممكن يكون شال المنتج من المفضلة وهو جوه
                         },
+                        trailing: IconButton(
+                          icon: const Icon(Icons.favorite, color: AppTheme.errorColor, size: 20),
+                          onPressed: () => _removeFavorite(product),
+                        ),
                       );
                     },
                   ),

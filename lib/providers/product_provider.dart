@@ -12,6 +12,7 @@ class ProductProvider extends ChangeNotifier {
   String _searchQuery = '';
   double? _minPrice;
   double? _maxPrice;
+  String? _condition;
   bool _isLoading = false;
   bool _hasError = false;
 
@@ -20,6 +21,7 @@ class ProductProvider extends ChangeNotifier {
   String? get selectedCategoryId => _selectedCategoryId;
   double? get minPrice => _minPrice;
   double? get maxPrice => _maxPrice;
+  String? get condition => _condition;
   bool get isLoading => _isLoading;
   bool get hasError => _hasError;
 
@@ -40,6 +42,7 @@ class ProductProvider extends ChangeNotifier {
         status: statusFilter,
         minPrice: _minPrice,
         maxPrice: _maxPrice,
+        condition: _condition,
       );
     } catch (e) {
       _hasError = true;
@@ -52,6 +55,11 @@ class ProductProvider extends ChangeNotifier {
   void setPriceRange(double? min, double? max) {
     _minPrice = min;
     _maxPrice = max;
+    loadProducts();
+  }
+
+  void setCondition(String? condition) {
+    _condition = condition;
     loadProducts();
   }
 

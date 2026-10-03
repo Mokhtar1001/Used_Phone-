@@ -22,6 +22,7 @@ class ProductService {
     String? status,
     double? minPrice,
     double? maxPrice,
+    String? condition,
   }) async {
     var query = _client.from('products').select('*, product_images(*)');
 
@@ -36,6 +37,9 @@ class ProductService {
     }
     if (maxPrice != null) {
       query = query.lte('price', maxPrice);
+    }
+    if (condition != null) {
+      query = query.eq('condition', condition);
     }
     if (searchQuery != null && searchQuery.isNotEmpty) {
       query = query.or(

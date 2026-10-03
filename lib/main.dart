@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 import 'core/constants.dart';
 import 'core/theme.dart';
@@ -24,6 +25,11 @@ Future<void> main() async {
     url: AppConstants.supabaseUrl,
     anonKey: AppConstants.supabaseAnonKey,
   );
+
+  // 1.5 تهيئة بيانات التاريخ لـ intl (أسامي الشهور/الأيام بالعربي والإنجليزي)
+  // من غيرها DateFormat بأسماء زي 'EEEE'/'MMMM' بيرمي Exception لو اللغة مش 'en'
+  await initializeDateFormatting('ar');
+  await initializeDateFormatting('en');
 
   // 2. تهيئة Firebase (بنستخدمه للإشعارات بس - FCM)
   try {
@@ -57,9 +63,11 @@ class MyApp extends StatelessWidget {
           return MaterialApp(
             title: 'Merchant',
             debugShowCheckedModeBanner: false,
-            themeMode: themeProvider.themeMode,
-            theme: AppTheme.light,
-            darkTheme: AppTheme.dark,
+            // ⚠️ الوضع الليلي متعطّل مؤقتًا بطلب من الفريق لحد ما نخلص تصميم الويب.
+            // لإرجاعه: رجّع السطر لـ themeMode: themeProvider.themeMode
+            themeMode: ThemeMode.light,
+            theme: AppTheme.light(isArabic: localeProvider.isArabic),
+            darkTheme: AppTheme.dark(isArabic: localeProvider.isArabic),
             locale: localeProvider.locale,
             supportedLocales: const [Locale('ar'), Locale('en')],
             localizationsDelegates: const [

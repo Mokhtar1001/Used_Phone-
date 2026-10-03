@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../../providers/theme_provider.dart';
 import '../../providers/locale_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../core/theme.dart';
@@ -19,7 +18,6 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isArabic = context.watch<LocaleProvider>().isArabic;
-    final themeProvider = context.watch<ThemeProvider>();
     final auth = context.watch<AuthProvider>();
 
     return Scaffold(
@@ -83,18 +81,8 @@ class SettingsScreen extends StatelessWidget {
             ),
           ),
 
-          const SizedBox(height: 16),
-          _SectionHeader(title: isArabic ? 'التخصيص' : 'Personalization'),
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(border: Border.all(color: AppTheme.blackColor10), borderRadius: BorderRadius.circular(14)),
-            child: SwitchListTile(
-              secondary: const Icon(Icons.dark_mode_outlined),
-              title: Text(isArabic ? 'الوضع الليلي' : 'Dark Mode'),
-              value: themeProvider.themeMode == ThemeMode.dark,
-              onChanged: (v) => context.read<ThemeProvider>().toggleTheme(v),
-            ),
-          ),
+          // ⚠️ قسم "التخصيص" (الوضع الليلي) متخفي مؤقتًا - الوضع الليلي معطل حاليًا بطلب الفريق.
+          // لإرجاعه: شيل الـ comment وارجع الـ SwitchListTile اللي كان هنا.
 
           const SizedBox(height: 16),
           _SectionHeader(title: isArabic ? 'الإعدادات' : 'Settings'),
