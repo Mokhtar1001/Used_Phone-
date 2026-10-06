@@ -17,6 +17,8 @@ import 'analytics_screen.dart';
 import 'inspection_requests_admin_screen.dart';
 import 'orders_screen.dart';
 import 'admin_chats_screen.dart';
+import 'sell_requests_admin_screen.dart';
+import 'sell_pricing_screen.dart';
 
 /// الشاشة الرئيسية الفعلية للوحة تحكم الأدمن (Dashboard):
 /// نظرة سريعة على الأرقام المهمة + تنبيهات لحاجات محتاجة متابعة + اختصارات
@@ -212,6 +214,18 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                       badgeCount: _pendingInspections,
                       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const InspectionRequestsAdminScreen())),
                     ),
+                    _QuickAction(
+                      icon: Icons.sell_outlined,
+                      label: isArabic ? 'طلبات بيع الزبائن' : 'Sell Requests',
+                      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SellRequestsAdminScreen())),
+                    ),
+                    // التسعير للسوبر أدمن بس (والحماية الفعلية في قاعدة البيانات)
+                    if (context.watch<AuthProvider>().isSuperAdmin)
+                      _QuickAction(
+                        icon: Icons.price_change_outlined,
+                        label: isArabic ? 'تسعير البيع' : 'Sell Pricing',
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SellPricingScreen())),
+                      ),
                   ],
                 ),
                 const SizedBox(height: 28),

@@ -60,7 +60,8 @@ class ProfileMenuButton extends StatelessWidget {
         const PopupMenuDivider(),
         _item('edit_profile', Icons.person_outline, isArabic ? 'تعديل البروفايل' : 'Edit Profile'),
         _item('loyalty', Icons.star_border_rounded, isArabic ? 'نقاط الولاء' : 'Loyalty Points'),
-        _item('language', Icons.translate_rounded, isArabic ? 'English' : 'العربية'),
+        // زرار الترجمة مخفي مؤقتًا - لإرجاعه: kShowLanguageToggle = true في locale_provider.dart
+        if (kShowLanguageToggle) _item('language', Icons.translate_rounded, isArabic ? 'English' : 'العربية'),
         const PopupMenuDivider(),
         _item('logout', Icons.logout_rounded, isArabic ? 'تسجيل الخروج' : 'Logout', isDestructive: true),
       ],

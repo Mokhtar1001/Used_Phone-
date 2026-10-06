@@ -12,6 +12,7 @@ class AuthProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get isLoggedIn => _authService.isLoggedIn;
   bool get isAdmin => _profile?.isAdmin ?? false;
+  bool get isSuperAdmin => _profile?.isSuperAdmin ?? false;
 
   AuthProvider() {
     _init();

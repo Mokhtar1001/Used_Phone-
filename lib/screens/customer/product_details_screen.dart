@@ -1,3 +1,4 @@
+import 'dart:ui' show PointerDeviceKind;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -11,6 +12,8 @@ import '../../models/review.dart';
 import '../../providers/locale_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/guest_guard.dart';
+import '../../core/theme.dart';
+import '../../core/responsive.dart';
 import 'chat_screen.dart';
 import 'checkout_screen.dart';
 
@@ -212,6 +215,83 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     }
 
     final product = _product!;
+    final isDesktop = Responsive.isDesktop(context);
+
+    // ───────── موبايل/تطبيق: نفس الشكل القديم (صور بالسحب + بار سفلي) ─────────
+    final mobileBody = RefreshIndicator(
+      onRefresh: _load,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _ImageGallery(images: product.images, height: 280, showArrows: false, fit: BoxFit.cover),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHeaderInfo(product, isArabic),
+                  const SizedBox(height: 20),
+                  _buildDescription(product, isArabic),
+                  const SizedBox(height: 24),
+                  _buildReviews(isArabic),
+                  const SizedBox(height: 100),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    // ───────── ويب/ديسكتوب: عمودين - الصور بسهم من الجنب + التفاصيل والأزرار جنبها ─────────
+    final desktopBody = RefreshIndicator(
+      onRefresh: _load,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: Responsive.maxContentWidth),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    flex: 5,
+                    child: _ImageGallery(
+                      images: product.images,
+                      height: 540,
+                      showArrows: true,
+                      fit: BoxFit.contain,
+                      framed: true,
+                    ),
+                  ),
+                  const SizedBox(width: 56),
+                  Expanded(
+                    flex: 5,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildHeaderInfo(product, isArabic),
+                        const SizedBox(height: 24),
+                        _buildActions(product, isArabic),
+                        const SizedBox(height: 28),
+                        _buildDescription(product, isArabic),
+                        const SizedBox(height: 28),
+                        _buildReviews(isArabic),
+                        const SizedBox(height: 40),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -224,145 +304,145 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: _load,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(
-                height: 280,
-                child: product.images.isEmpty
-                    ? Container(color: Colors.grey.shade200, child: const Icon(Icons.phone_android, size: 80))
-                    : PageView.builder(
-                        itemCount: product.images.length,
-                        itemBuilder: (context, i) => CachedNetworkImage(
-                          imageUrl: product.images[i],
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-              ),
-              Padding(
+      body: isDesktop ? desktopBody : mobileBody,
+      // على الديسكتوب الأزرار جوه العمود الأيمن، فمفيش بار سفلي
+      bottomNavigationBar: isDesktop
+          ? null
+          : SafeArea(
+              child: Padding(
                 padding: const EdgeInsets.all(16),
+                child: _buildActions(product, isArabic),
+              ),
+            ),
+    );
+  }
+
+  /// الاسم + المشاهدات + السعر + التقييم + شيبس المواصفات
+  Widget _buildHeaderInfo(Product product, bool isArabic) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(product.name(isArabic), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            ),
+            Icon(Icons.remove_red_eye_outlined, size: 16, color: Colors.grey.shade500),
+            const SizedBox(width: 4),
+            Text('${product.viewsCount}', style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Text(
+              '${product.price.toStringAsFixed(0)} ${isArabic ? 'ج.م' : 'EGP'}',
+              style: TextStyle(fontSize: 20, color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600),
+            ),
+            if (_avgRating != null) ...[
+              const SizedBox(width: 12),
+              const Icon(Icons.star, size: 18, color: Color(0xFFFFC107)),
+              const SizedBox(width: 2),
+              Text('${_avgRating!.toStringAsFixed(1)} (${_reviews.length})'),
+            ],
+          ],
+        ),
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            if (product.brand != null && product.brand!.isNotEmpty) _InfoChip(icon: Icons.branding_watermark, label: product.brand!),
+            if (product.storage != null && product.storage!.isNotEmpty) _InfoChip(icon: Icons.sd_storage, label: product.storage!),
+            if (product.color != null && product.color!.isNotEmpty) _InfoChip(icon: Icons.color_lens, label: product.color!),
+            if (product.condition != null) _InfoChip(icon: Icons.verified, label: _conditionLabel(product.condition!, isArabic)),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDescription(Product product, bool isArabic) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(isArabic ? 'الوصف' : 'Description', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        const SizedBox(height: 8),
+        Text(product.description(isArabic), style: const TextStyle(height: 1.5)),
+      ],
+    );
+  }
+
+  Widget _buildReviews(bool isArabic) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(isArabic ? 'التقييمات (${_reviews.length})' : 'Reviews (${_reviews.length})',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            TextButton.icon(
+              onPressed: _showReviewDialog,
+              icon: const Icon(Icons.star_border, size: 18),
+              label: Text(isArabic ? 'قيّم' : 'Rate'),
+            ),
+          ],
+        ),
+        if (_reviews.isEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Text(isArabic ? 'لا يوجد تقييمات بعد' : 'No reviews yet', style: TextStyle(color: Colors.grey.shade500)),
+          )
+        else
+          ..._reviews.map((r) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 6),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
-                        Expanded(
-                          child: Text(product.name(isArabic), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                        ),
-                        Icon(Icons.remove_red_eye_outlined, size: 16, color: Colors.grey.shade500),
-                        const SizedBox(width: 4),
-                        Text('${product.viewsCount}', style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
+                        Text(r.customerName ?? (isArabic ? 'عميل' : 'Customer'), style: const TextStyle(fontWeight: FontWeight.w600)),
+                        const SizedBox(width: 6),
+                        ...List.generate(5, (i) => Icon(i < r.rating ? Icons.star : Icons.star_border, size: 13, color: const Color(0xFFFFC107))),
                       ],
                     ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Text(
-                          '${product.price.toStringAsFixed(0)} ${isArabic ? 'ج.م' : 'EGP'}',
-                          style: TextStyle(fontSize: 20, color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600),
-                        ),
-                        if (_avgRating != null) ...[
-                          const SizedBox(width: 12),
-                          const Icon(Icons.star, size: 18, color: Color(0xFFFFC107)),
-                          const SizedBox(width: 2),
-                          Text('${_avgRating!.toStringAsFixed(1)} (${_reviews.length})'),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        if (product.brand != null && product.brand!.isNotEmpty) _InfoChip(icon: Icons.branding_watermark, label: product.brand!),
-                        if (product.storage != null && product.storage!.isNotEmpty) _InfoChip(icon: Icons.sd_storage, label: product.storage!),
-                        if (product.color != null && product.color!.isNotEmpty) _InfoChip(icon: Icons.color_lens, label: product.color!),
-                        if (product.condition != null) _InfoChip(icon: Icons.verified, label: _conditionLabel(product.condition!, isArabic)),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    Text(isArabic ? 'الوصف' : 'Description', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                    const SizedBox(height: 8),
-                    Text(product.description(isArabic), style: const TextStyle(height: 1.5)),
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(isArabic ? 'التقييمات (${_reviews.length})' : 'Reviews (${_reviews.length})',
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                        TextButton.icon(
-                          onPressed: _showReviewDialog,
-                          icon: const Icon(Icons.star_border, size: 18),
-                          label: Text(isArabic ? 'قيّم' : 'Rate'),
-                        ),
-                      ],
-                    ),
-                    if (_reviews.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        child: Text(isArabic ? 'لا يوجد تقييمات بعد' : 'No reviews yet', style: TextStyle(color: Colors.grey.shade500)),
-                      )
-                    else
-                      ..._reviews.map((r) => Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 6),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Text(r.customerName ?? (isArabic ? 'عميل' : 'Customer'), style: const TextStyle(fontWeight: FontWeight.w600)),
-                                    const SizedBox(width: 6),
-                                    ...List.generate(5, (i) => Icon(i < r.rating ? Icons.star : Icons.star_border, size: 13, color: const Color(0xFFFFC107))),
-                                  ],
-                                ),
-                                if (r.comment != null) Text(r.comment!, style: TextStyle(color: Colors.grey.shade700)),
-                              ],
-                            ),
-                          )),
-                    const SizedBox(height: 100),
+                    if (r.comment != null) Text(r.comment!, style: TextStyle(color: Colors.grey.shade700)),
                   ],
                 ),
-              ),
-            ],
+              )),
+      ],
+    );
+  }
+
+  /// زرار الشراء + زرار الشات (نفس الكود القديم)
+  Widget _buildActions(Product product, bool isArabic) {
+    return Row(
+      children: [
+        if (product.status != 'sold')
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: () async {
+                if (!await requireLogin(context)) return;
+                if (!context.mounted) return;
+                Navigator.push(context, MaterialPageRoute(builder: (_) => CheckoutScreen(product: product)));
+              },
+              icon: const Icon(Icons.credit_card, size: 18),
+              label: Text(isArabic ? 'شراء' : 'Buy'),
+            ),
+          ),
+        if (product.status != 'sold') const SizedBox(width: 10),
+        Expanded(
+          flex: 2,
+          child: ElevatedButton.icon(
+            onPressed: (product.status == 'sold' || _isStartingChat) ? null : _startChat,
+            icon: _isStartingChat
+                ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                : const Icon(Icons.chat_bubble_outline),
+            label: Text(isArabic ? 'شات عن هذا المنتج' : 'Chat about this product'),
           ),
         ),
-      ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              if (product.status != 'sold')
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: () async {
-                      if (!await requireLogin(context)) return;
-                      if (!context.mounted) return;
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => CheckoutScreen(product: product)));
-                    },
-                    icon: const Icon(Icons.credit_card, size: 18),
-                    label: Text(isArabic ? 'شراء' : 'Buy'),
-                  ),
-                ),
-              if (product.status != 'sold') const SizedBox(width: 10),
-              Expanded(
-                flex: 2,
-                child: ElevatedButton.icon(
-                  onPressed: (product.status == 'sold' || _isStartingChat) ? null : _startChat,
-                  icon: _isStartingChat
-                      ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Icon(Icons.chat_bubble_outline),
-                  label: Text(isArabic ? 'شات عن هذا المنتج' : 'Chat about this product'),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+      ],
     );
   }
 
@@ -390,6 +470,158 @@ class _InfoChip extends StatelessWidget {
     return Chip(
       avatar: Icon(icon, size: 16),
       label: Text(label),
+    );
+  }
+}
+
+/// معرض الصور: سحب (موبايل) + أسهم من الجنب وعدّاد (ويب).
+class _ImageGallery extends StatefulWidget {
+  final List<String> images;
+  final double height;
+  final bool showArrows;
+  final BoxFit fit;
+  final bool framed; // إطار بحواف دايرة وخلفية فاتحة (للويب)
+
+  const _ImageGallery({
+    required this.images,
+    required this.height,
+    required this.showArrows,
+    required this.fit,
+    this.framed = false,
+  });
+
+  @override
+  State<_ImageGallery> createState() => _ImageGalleryState();
+}
+
+class _ImageGalleryState extends State<_ImageGallery> {
+  final PageController _controller = PageController();
+  int _index = 0;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _go(int page) {
+    _controller.animateToPage(page, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final images = widget.images;
+
+    if (images.isEmpty) {
+      return Container(
+        height: widget.height,
+        decoration: BoxDecoration(
+          color: widget.framed ? AppTheme.offWhite : Colors.grey.shade200,
+          borderRadius: widget.framed ? BorderRadius.circular(16) : null,
+        ),
+        child: const Center(child: Icon(Icons.phone_android, size: 80)),
+      );
+    }
+
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
+    final canGoPrev = _index > 0;
+    final canGoNext = _index < images.length - 1;
+    final showControls = widget.showArrows && images.length > 1;
+
+    return SizedBox(
+      height: widget.height,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(widget.framed ? 16 : 0),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: Container(
+                color: widget.framed ? AppTheme.offWhite : null,
+                // يسمح بالسحب بالماوس على الويب كمان
+                child: ScrollConfiguration(
+                  behavior: ScrollConfiguration.of(context).copyWith(dragDevices: PointerDeviceKind.values.toSet()),
+                  child: PageView.builder(
+                    controller: _controller,
+                    itemCount: images.length,
+                    onPageChanged: (i) => setState(() => _index = i),
+                    itemBuilder: (context, i) => CachedNetworkImage(
+                      imageUrl: images[i],
+                      fit: widget.fit,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            if (showControls && canGoPrev)
+              PositionedDirectional(
+                start: 12,
+                top: 0,
+                bottom: 0,
+                child: Center(
+                  child: _GalleryArrow(
+                    icon: isRtl ? Icons.chevron_right_rounded : Icons.chevron_left_rounded,
+                    onTap: () => _go(_index - 1),
+                  ),
+                ),
+              ),
+            if (showControls && canGoNext)
+              PositionedDirectional(
+                end: 12,
+                top: 0,
+                bottom: 0,
+                child: Center(
+                  child: _GalleryArrow(
+                    icon: isRtl ? Icons.chevron_left_rounded : Icons.chevron_right_rounded,
+                    onTap: () => _go(_index + 1),
+                  ),
+                ),
+              ),
+            if (showControls)
+              Positioned(
+                bottom: 12,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppTheme.charcoal.withValues(alpha: 0.75),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      '${_index + 1} / ${images.length}',
+                      style: const TextStyle(color: AppTheme.pureWhite, fontSize: 12, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GalleryArrow extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  const _GalleryArrow({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppTheme.pureWhite.withValues(alpha: 0.92),
+      shape: const CircleBorder(side: BorderSide(color: AppTheme.lightGray)),
+      elevation: 1,
+      child: InkWell(
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: Icon(icon, size: 28, color: AppTheme.charcoal),
+        ),
+      ),
     );
   }
 }

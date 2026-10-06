@@ -5,6 +5,7 @@ class Profile {
   final String role;
   final String? avatarUrl;
   final DateTime createdAt;
+  final bool isSuperAdmin; // أدمن (role = admin) + علامة is_super_admin
 
   Profile({
     required this.id,
@@ -13,6 +14,7 @@ class Profile {
     required this.role,
     this.avatarUrl,
     required this.createdAt,
+    this.isSuperAdmin = false,
   });
 
   bool get isAdmin => role == 'admin';
@@ -25,6 +27,7 @@ class Profile {
       role: json['role'] ?? 'customer',
       avatarUrl: json['avatar_url'],
       createdAt: DateTime.parse(json['created_at']),
+      isSuperAdmin: json['role'] == 'admin' && json['is_super_admin'] == true,
     );
   }
 }

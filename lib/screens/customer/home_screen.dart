@@ -11,6 +11,7 @@ import '../../widgets/profile_menu_button.dart';
 import 'product_details_screen.dart';
 import 'favorites_screen.dart';
 import 'notifications_screen.dart';
+import 'sell_phone_screen.dart';
 // ⚠️ "محادثاتي" و"الإعدادات" متخفيين مؤقتًا (تابات + شريط النافيجيشن) بطلب الفريق.
 // لإرجاعهم: رجّع الاستيرادات دي وارجع الـ pages[]/navItems[]/ModernNavBar زي ما كانوا:
 // import '../../widgets/modern_nav_bar.dart';
@@ -27,7 +28,6 @@ const WhyIconLayout kWhyIconLayout = WhyIconLayout.top;
 // ألوان من ملف الـ HTML مش موجودة في AppTheme
 const Color _midGray = Color(0xFF8C8A85);
 const Color _deepGray = Color(0xFF4A4846);
-const Color _green = Color(0xFF3A7A44);
 const Color _border = Color(0xFFE5E3DF);
 
 TextStyle _t(double size, {FontWeight w = FontWeight.w400, Color? c, double? h, double? ls}) =>
@@ -207,6 +207,49 @@ class _ProductsTabState extends State<_ProductsTab> {
     );
   }
 
+  /// السيرش + زرار الفلتر: فوق الصفحة (تحت الهيدر مباشرة).
+  /// النتايج بتظهر في قسم "Browse phones".
+  Widget _buildSearchBar(BuildContext context, ProductProvider productProvider) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: AppTheme.pureWhite,
+        border: const Border(bottom: BorderSide(color: _border)),
+      ),
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: _Constrained(
+        child: Row(
+          children: [
+            Expanded(
+              child: SearchField(
+                hintText: isArabic ? 'ابحث عن موبايل...' : 'Search phones...',
+                onChanged: (v) => context.read<ProductProvider>().search(v),
+              ),
+            ),
+            const SizedBox(width: 10),
+            InkWell(
+              onTap: () => _openFilterSheet(context),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  Icons.tune,
+                  color: (productProvider.minPrice != null || productProvider.maxPrice != null || productProvider.condition != null)
+                      ? AppTheme.gold
+                      : Colors.white,
+                  size: 20,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   /// قسم "Browse phones": العنوان + فلاتر الأقسام (All + الأقسام من الداتابيز) + الجريد.
   /// فلاتر Grade A / Grade B اتشالت من صف الفلاتر.
   Widget _buildBrowseSection(BuildContext context, ProductProvider productProvider) {
@@ -300,35 +343,6 @@ class _ProductsTabState extends State<_ProductsTab> {
               ),
             ],
           ),
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              Expanded(
-                child: SearchField(
-                  hintText: isArabic ? 'ابحث عن موبايل...' : 'Search phones...',
-                  onChanged: (v) => context.read<ProductProvider>().search(v),
-                ),
-              ),
-              const SizedBox(width: 10),
-              InkWell(
-                onTap: () => _openFilterSheet(context),
-                child: Container(
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryColor,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    Icons.tune,
-                    color: (productProvider.minPrice != null || productProvider.maxPrice != null || productProvider.condition != null)
-                        ? AppTheme.gold
-                        : Colors.white,
-                    size: 20,
-                  ),
-                ),
-              ),
-            ],
-          ),
           const SizedBox(height: 28),
           gridOrState(),
         ],
@@ -391,7 +405,11 @@ class _ProductsTabState extends State<_ProductsTab> {
                   ],
                 ),
               ),
-            _Hero(onBrowse: _scrollToBrowse),
+            _buildSearchBar(context, productProvider),
+            _Hero(
+              onBrowse: _scrollToBrowse,
+              onSell: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SellPhoneScreen())),
+            ),
             const _WhySection(),
             _buildBrowseSection(context, productProvider),
             const _GradingSection(),
@@ -509,7 +527,8 @@ class _ResponsiveGrid extends StatelessWidget {
 
 class _Hero extends StatelessWidget {
   final VoidCallback onBrowse;
-  const _Hero({required this.onBrowse});
+  final VoidCallback onSell;
+  const _Hero({required this.onBrowse, required this.onSell});
 
   @override
   Widget build(BuildContext context) {
@@ -553,7 +572,7 @@ class _Hero extends StatelessWidget {
               child: const Text('Browse phones'),
             ),
             OutlinedButton(
-              onPressed: () {}, // مفيش شاشة "Sell your phone" في التطبيق لسه
+              onPressed: onSell,
               style: OutlinedButton.styleFrom(
                 backgroundColor: AppTheme.pureWhite,
                 foregroundColor: AppTheme.charcoal,
@@ -905,7 +924,7 @@ class _DisclaimerBox extends StatelessWidget {
       height: 44,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: AppTheme.gold.withOpacity(0.15),
+        color: AppTheme.gold.withValues(alpha: 0.15),
         border: Border.all(color: AppTheme.gold, width: 1.5),
       ),
       child: Icon(Icons.check_rounded, color: AppTheme.gold, size: 24),
