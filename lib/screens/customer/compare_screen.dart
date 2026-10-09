@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/customer_nav_actions.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../providers/compare_provider.dart';
@@ -27,7 +28,7 @@ class CompareScreen extends StatelessWidget {
     final products = context.watch<CompareProvider>().items;
 
     return Scaffold(
-      appBar: AppBar(
+      appBar: withCustomerNav(context, AppBar(
         title: Text(isArabic ? 'مقارنة المنتجات' : 'Compare Products'),
         actions: [
           TextButton(
@@ -35,7 +36,7 @@ class CompareScreen extends StatelessWidget {
             child: Text(isArabic ? 'مسح الكل' : 'Clear all'),
           ),
         ],
-      ),
+      )),
       body: products.length < 2
           ? Center(
               child: Text(

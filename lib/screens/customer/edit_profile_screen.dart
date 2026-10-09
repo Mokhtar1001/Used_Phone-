@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import '../../widgets/customer_nav_actions.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -105,7 +106,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     final profile = context.watch<AuthProvider>().profile;
 
     return Scaffold(
-      appBar: AppBar(title: Text(isArabic ? 'تعديل البروفايل' : 'Edit Profile')),
+      appBar: withCustomerNav(context, AppBar(title: Text(isArabic ? 'تعديل البروفايل' : 'Edit Profile'))),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Form(

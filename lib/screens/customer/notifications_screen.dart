@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/customer_nav_actions.dart';
 import 'package:provider/provider.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import '../../services/notification_service.dart';
@@ -51,7 +52,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final isArabic = context.watch<LocaleProvider>().isArabic;
 
     return Scaffold(
-      appBar: AppBar(title: Text(isArabic ? 'الإشعارات' : 'Notifications')),
+      appBar: withCustomerNav(context, AppBar(title: Text(isArabic ? 'الإشعارات' : 'Notifications'))),
       body: RefreshIndicator(
         onRefresh: _load,
         child: _isLoading

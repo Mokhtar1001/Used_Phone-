@@ -16,6 +16,9 @@ class Product {
   final int viewsCount;
   final List<String> images;
 
+  /// مدة الضمان بالشهور (الافتراضي 3 شهور)
+  final int warrantyMonths;
+
   Product({
     required this.id,
     this.categoryId,
@@ -33,10 +36,23 @@ class Product {
     this.soldAt,
     this.viewsCount = 0,
     this.images = const [],
+    this.warrantyMonths = 3,
   });
 
   String name(bool isArabic) => isArabic ? nameAr : nameEn;
   String description(bool isArabic) => (isArabic ? descriptionAr : descriptionEn) ?? '';
+  /// "3 months" / "3 شهور"
+  String warrantyLabel(bool isArabic) {
+    final m = warrantyMonths;
+    if (isArabic) {
+      if (m == 1) return 'شهر';
+      if (m == 2) return 'شهرين';
+      if (m >= 3 && m <= 10) return '$m شهور';
+      return '$m شهر';
+    }
+    return '$m ${m == 1 ? 'month' : 'months'}';
+  }
+
   String get mainImage => images.isNotEmpty ? images.first : '';
 
   /// تحويل الـ condition (excellent/good/fair) لحرف Grade مختصر (A/B/C) لعرضه في البادچ
@@ -88,6 +104,7 @@ class Product {
       soldAt: json['sold_at'] != null ? DateTime.parse(json['sold_at']) : null,
       viewsCount: json['views_count'] ?? 0,
       images: images,
+      warrantyMonths: (json['warranty_months'] as num?)?.toInt() ?? 3,
     );
   }
 
@@ -103,5 +120,6 @@ class Product {
         'storage': storage,
         'color': color,
         'status': status,
+        'warranty_months': warrantyMonths,
       };
 }

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import '../../widgets/customer_nav_actions.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../services/chat_service.dart';
@@ -135,7 +136,7 @@ class _ChatScreenState extends State<ChatScreen> {
     final currentUserId = context.watch<AuthProvider>().profile?.id;
 
     return Scaffold(
-      appBar: AppBar(
+      appBar: withCustomerNav(context, AppBar(
         title: Column(
           children: [
             Text(widget.productName, style: const TextStyle(fontSize: 16)),
@@ -145,7 +146,7 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ],
         ),
-      ),
+      )),
       body: Column(
         children: [
           Expanded(

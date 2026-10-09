@@ -8,6 +8,8 @@ import '../core/theme.dart';
 class SearchField extends StatefulWidget {
   final String hintText;
   final ValueChanged<String>? onChanged;
+  final ValueChanged<String>? onSubmitted;
+  final VoidCallback? onTap;
   final TextEditingController? controller;
   final Widget? trailing;
 
@@ -15,6 +17,8 @@ class SearchField extends StatefulWidget {
     super.key,
     required this.hintText,
     this.onChanged,
+    this.onSubmitted,
+    this.onTap,
     this.controller,
     this.trailing,
   });
@@ -52,6 +56,9 @@ class _SearchFieldState extends State<SearchField> {
         controller: widget.controller,
         focusNode: _focusNode,
         onChanged: widget.onChanged,
+        onSubmitted: widget.onSubmitted,
+        onTap: widget.onTap,
+        textInputAction: TextInputAction.search,
         style: const TextStyle(fontSize: 14, color: AppTheme.charcoal),
         decoration: InputDecoration(
           hintText: widget.hintText,

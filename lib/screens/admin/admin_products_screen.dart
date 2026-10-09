@@ -87,6 +87,7 @@ class _AdminProductsScreenState extends State<AdminProductsScreen> {
                                   ProductCard(
                                     product: product,
                                     isArabic: isArabic,
+                                    showAddToCart: false,
                                     onTap: () => Navigator.push(
                                       context,
                                       MaterialPageRoute(builder: (_) => ProductDetailsScreen(productId: product.id)),

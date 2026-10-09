@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/customer_nav_actions.dart';
 import 'package:provider/provider.dart';
 import '../../services/favorites_service.dart';
 import '../../models/product.dart';
@@ -49,7 +50,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     final isArabic = context.watch<LocaleProvider>().isArabic;
 
     return Scaffold(
-      appBar: AppBar(title: Text(isArabic ? 'المفضلة' : 'Favorites')),
+      appBar: withCustomerNav(context, AppBar(title: Text(isArabic ? 'المفضلة' : 'Favorites'))),
       body: RefreshIndicator(
         onRefresh: _load,
         child: _isLoading

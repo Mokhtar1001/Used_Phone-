@@ -10,11 +10,9 @@ import '../../providers/auth_provider.dart';
 import '../../providers/locale_provider.dart';
 import '../../services/sell_price_calculator.dart';
 import '../../services/sell_service.dart';
+import '../../widgets/customer_nav_actions.dart';
 import '../../widgets/desktop_top_nav.dart';
 import '../../widgets/guest_guard.dart';
-import '../../widgets/profile_menu_button.dart';
-import 'favorites_screen.dart';
-import 'notifications_screen.dart';
 
 /// رحلة "بيع موبايلك" (iPhone فقط):
 /// اختيار الموديل ← المساحة ← الأسئلة (بالترتيب اللي حدده السوبر أدمن) ← السعر التقديري (من–إلى)
@@ -182,21 +180,7 @@ class _SellPhoneScreenState extends State<SellPhoneScreen> {
             selectedIndex: 0,
             onDestinationSelected: (_) {},
             items: const [],
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TopNavIconButton(
-                  icon: Icons.notifications_none_rounded,
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen())),
-                ),
-                TopNavIconButton(
-                  icon: Icons.favorite_border,
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FavoritesScreen())),
-                ),
-                const SizedBox(width: 6),
-                const ProfileMenuButton(),
-              ],
-            ),
+            trailing: const CustomerNavActions(),
           )
         : AppBar(title: Text(_t('بيع موبايلك', 'Sell your phone')));
 

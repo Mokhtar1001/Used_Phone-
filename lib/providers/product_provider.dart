@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/product.dart';
 import '../models/category.dart';
@@ -16,6 +17,9 @@ class ProductProvider extends ChangeNotifier {
   bool _isLoading = false;
   bool _hasError = false;
 
+  Timer? _searchDebounce;
+  int _requestId = 0; // رقم آخر طلب - عشان نتجاهل أي رد قديم وصل متأخر
+
   List<Product> get products => _products;
   List<ProductCategory> get categories => _categories;
   String? get selectedCategoryId => _selectedCategoryId;
@@ -31,12 +35,13 @@ class ProductProvider extends ChangeNotifier {
   }
 
   Future<void> loadProducts({String? statusFilter}) async {
+    final requestId = ++_requestId;
     _isLoading = true;
     _hasError = false;
     notifyListeners();
 
     try {
-      _products = await _service.getProducts(
+      final result = await _service.getProducts(
         categoryId: _selectedCategoryId,
         searchQuery: _searchQuery,
         status: statusFilter,
@@ -44,12 +49,15 @@ class ProductProvider extends ChangeNotifier {
         maxPrice: _maxPrice,
         condition: _condition,
       );
+      // لو فيه طلب أحدث اتبعت وإحنا مستنيين، رد الطلب ده قديم - نتجاهله
+      if (requestId != _requestId) return;
+      _products = result;
     } catch (e) {
+      if (requestId != _requestId) return;
       _hasError = true;
-    } finally {
-      _isLoading = false;
-      notifyListeners();
     }
+    _isLoading = false;
+    notifyListeners();
   }
 
   void setPriceRange(double? min, double? max) {
@@ -68,9 +76,21 @@ class ProductProvider extends ChangeNotifier {
     loadProducts();
   }
 
+  /// البحث بيتم في الداتابيز (Supabase) مش في التطبيق.
+  /// بنستنى 350ms بعد آخر حرف قبل ما نبعت الطلب، عشان مانبعتش طلب لكل حرف.
   void search(String query) {
-    _searchQuery = query;
-    loadProducts();
+    final q = query.trim();
+    if (q == _searchQuery) return;
+    _searchQuery = q;
+
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 350), loadProducts);
+  }
+
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    super.dispose();
   }
 
   Future<void> deleteProduct(String id) async {

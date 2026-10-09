@@ -1,10 +1,10 @@
 import 'dart:ui' show PointerDeviceKind;
 import 'package:flutter/material.dart';
+import '../../widgets/customer_nav_actions.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:share_plus/share_plus.dart';
 import '../../services/product_service.dart';
-import '../../services/chat_service.dart';
+import '../../services/inspection_service.dart';
 import '../../services/favorites_service.dart';
 import '../../services/reviews_service.dart';
 import '../../models/product.dart';
@@ -14,7 +14,6 @@ import '../../providers/auth_provider.dart';
 import '../../widgets/guest_guard.dart';
 import '../../core/theme.dart';
 import '../../core/responsive.dart';
-import 'chat_screen.dart';
 import 'checkout_screen.dart';
 
 class ProductDetailsScreen extends StatefulWidget {
@@ -27,7 +26,7 @@ class ProductDetailsScreen extends StatefulWidget {
 
 class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   final _productService = ProductService();
-  final _chatService = ChatService();
+  final _inspectionService = InspectionService();
   final _favoritesService = FavoritesService();
   final _reviewsService = ReviewsService();
 
@@ -35,7 +34,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   List<Review> _reviews = [];
   double? _avgRating;
   bool _isFavorite = false;
-  bool _isStartingChat = false;
+  bool _isRequestingInspection = false;
   bool _hasError = false;
   bool _viewCounted = false;
 
@@ -90,48 +89,45 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     if (mounted) setState(() => _isFavorite = newState);
   }
 
-  Future<void> _share() async {
-    final isArabic = context.read<LocaleProvider>().isArabic;
-    if (_product == null) return;
-    final text = isArabic
-        ? 'شوف الموبايل ده: ${_product!.nameAr} - ${_product!.price.toStringAsFixed(0)} ج.م'
-        : 'Check this phone: ${_product!.nameEn} - ${_product!.price.toStringAsFixed(0)} EGP';
-    await Share.share(text);
-  }
-
-  Future<void> _startChat() async {
+  /// "معاينة في المحل": بيسجّل طلب فحص للمنتج ده (نفس نظام طلبات الفحص الموجود) والأدمن بيتواصل مع العميل.
+  /// ⚠️ الشات مخفي مؤقتًا. لإرجاعه: رجّع ChatService/ChatScreen وزرار "شات عن هذا المنتج" من تاريخ git.
+  Future<void> _requestInspection() async {
     if (!await requireLogin(
       context,
-      messageAr: 'محتاج تسجل دخول عشان تبدأ محادثة مع البائع',
-      messageEn: 'You need to log in to start a chat with the seller',
+      messageAr: 'محتاج تسجل دخول عشان تطلب معاينة في المحل',
+      messageEn: 'You need to log in to request an in-store inspection',
     )) return;
     if (!mounted) return;
 
-    setState(() => _isStartingChat = true);
-    final auth = context.read<AuthProvider>();
-    final customerId = auth.profile?.id;
+    final customerId = context.read<AuthProvider>().profile?.id;
+    if (customerId == null) return;
+    final isArabic = context.read<LocaleProvider>().isArabic;
 
-    if (customerId == null) {
-      setState(() => _isStartingChat = false);
-      return;
-    }
-
-    final chatId = await _chatService.getOrCreateChat(
-      productId: widget.productId,
-      customerId: customerId,
-    );
-
-    setState(() => _isStartingChat = false);
-    if (mounted && _product != null) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ChatScreen(
-            chatId: chatId,
-            productName: _product!.name(context.read<LocaleProvider>().isArabic),
+    setState(() => _isRequestingInspection = true);
+    try {
+      await _inspectionService.createRequest(productId: widget.productId, customerId: customerId);
+      if (!mounted) return;
+      await showDialog<void>(
+        context: context,
+        builder: (c) => AlertDialog(
+          icon: const Icon(Icons.check_circle_outline, size: 40, color: AppTheme.successColor),
+          content: Text(
+            isArabic
+                ? 'تم إرسال طلب المعاينة! هنتواصل معاك لتحديد ميعاد في المحل.'
+                : "Inspection request sent! We'll contact you to arrange a time at the store.",
+            textAlign: TextAlign.center,
           ),
+          actions: [TextButton(onPressed: () => Navigator.pop(c), child: Text(isArabic ? 'تمام' : 'OK'))],
         ),
       );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(isArabic ? 'حصل خطأ، حاول تاني' : 'Something went wrong, please try again')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isRequestingInspection = false);
     }
   }
 
@@ -194,7 +190,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
 
     if (_hasError) {
       return Scaffold(
-        appBar: AppBar(),
+        appBar: _appBar(isArabic),
         body: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -211,7 +207,10 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     }
 
     if (_product == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return Scaffold(
+        appBar: _appBar(context.read<LocaleProvider>().isArabic),
+        body: const Center(child: CircularProgressIndicator()),
+      );
     }
 
     final product = _product!;
@@ -294,16 +293,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     );
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(isArabic ? 'تفاصيل المنتج' : 'Product Details'),
-        actions: [
-          IconButton(icon: const Icon(Icons.share_outlined), onPressed: _share),
-          IconButton(
-            icon: Icon(_isFavorite ? Icons.favorite : Icons.favorite_border, color: _isFavorite ? Colors.red : null),
-            onPressed: _toggleFavorite,
-          ),
-        ],
-      ),
+      appBar: _appBar(isArabic),
       body: isDesktop ? desktopBody : mobileBody,
       // على الديسكتوب الأزرار جوه العمود الأيمن، فمفيش بار سفلي
       bottomNavigationBar: isDesktop
@@ -317,7 +307,15 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     );
   }
 
-  /// الاسم + المشاهدات + السعر + التقييم + شيبس المواصفات
+  /// ديسكتوب/ويب: الهيدر العلوي بس (من غير شريط "Product Details" تحته).
+  /// موبايل/تطبيق: شريط عادي بزرار الرجوع والعنوان.
+  /// المفضلة بقت جنب اسم التليفون، والمشاركة اتشالت.
+  PreferredSizeWidget _appBar(bool isArabic) {
+    if (Responsive.isDesktop(context)) return customerTopNav();
+    return AppBar(title: Text(isArabic ? 'تفاصيل المنتج' : 'Product Details'));
+  }
+
+  /// الاسم + المفضلة + السعر + التقييم + المواصفات + الجريد والضمان
   Widget _buildHeaderInfo(Product product, bool isArabic) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -327,9 +325,11 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
             Expanded(
               child: Text(product.name(isArabic), style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
             ),
-            Icon(Icons.remove_red_eye_outlined, size: 16, color: Colors.grey.shade500),
-            const SizedBox(width: 4),
-            Text('${product.viewsCount}', style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
+            IconButton(
+              tooltip: isArabic ? 'المفضلة' : 'Favorite',
+              onPressed: _toggleFavorite,
+              icon: Icon(_isFavorite ? Icons.favorite : Icons.favorite_border, color: _isFavorite ? Colors.red : AppTheme.charcoal),
+            ),
           ],
         ),
         const SizedBox(height: 8),
@@ -355,8 +355,14 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
             if (product.brand != null && product.brand!.isNotEmpty) _InfoChip(icon: Icons.branding_watermark, label: product.brand!),
             if (product.storage != null && product.storage!.isNotEmpty) _InfoChip(icon: Icons.sd_storage, label: product.storage!),
             if (product.color != null && product.color!.isNotEmpty) _InfoChip(icon: Icons.color_lens, label: product.color!),
-            if (product.condition != null) _InfoChip(icon: Icons.verified, label: _conditionLabel(product.condition!, isArabic)),
           ],
+        ),
+        const SizedBox(height: 16),
+        _GradeWarrantyBlock(
+          gradeLetter: product.gradeLetter,
+          gradeLabel: product.condition == null ? null : _conditionLabel(product.condition!, isArabic),
+          warrantyLabel: product.warrantyMonths > 0 ? product.warrantyLabel(isArabic) : null,
+          isArabic: isArabic,
         ),
       ],
     );
@@ -415,11 +421,12 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     );
   }
 
-  /// زرار الشراء + زرار الشات (نفس الكود القديم)
+  /// زرار الشراء + "معاينة في المحل" (مكان زرار الشات المخفي مؤقتًا)
   Widget _buildActions(Product product, bool isArabic) {
+    final sold = product.status == 'sold';
     return Row(
       children: [
-        if (product.status != 'sold')
+        if (!sold)
           Expanded(
             child: OutlinedButton.icon(
               onPressed: () async {
@@ -431,15 +438,19 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
               label: Text(isArabic ? 'شراء' : 'Buy'),
             ),
           ),
-        if (product.status != 'sold') const SizedBox(width: 10),
+        if (!sold) const SizedBox(width: 10),
         Expanded(
           flex: 2,
           child: ElevatedButton.icon(
-            onPressed: (product.status == 'sold' || _isStartingChat) ? null : _startChat,
-            icon: _isStartingChat
+            onPressed: (sold || _isRequestingInspection) ? null : _requestInspection,
+            icon: _isRequestingInspection
                 ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                : const Icon(Icons.chat_bubble_outline),
-            label: Text(isArabic ? 'شات عن هذا المنتج' : 'Chat about this product'),
+                : const Icon(Icons.storefront_outlined, size: 18),
+            label: Text(
+              isArabic ? 'معاينة في المحل' : 'Inspection in the store',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
         ),
       ],
@@ -621,6 +632,105 @@ class _GalleryArrow extends StatelessWidget {
           height: 44,
           child: Icon(icon, size: 28, color: AppTheme.charcoal),
         ),
+      ),
+    );
+  }
+}
+
+/// بلوك الجريد + الضمان (الضمان تحت الجريد)
+class _GradeWarrantyBlock extends StatelessWidget {
+  final String? gradeLetter;
+  final String? gradeLabel;
+  final String? warrantyLabel;
+  final bool isArabic;
+
+  const _GradeWarrantyBlock({
+    required this.gradeLetter,
+    required this.gradeLabel,
+    required this.warrantyLabel,
+    required this.isArabic,
+  });
+
+  Widget _badge(String letter) {
+    Color bg;
+    Color fg;
+    Border? border;
+    switch (letter) {
+      case 'A':
+        bg = AppTheme.charcoal;
+        fg = AppTheme.pureWhite;
+        break;
+      case 'B':
+        bg = AppTheme.pureWhite;
+        fg = AppTheme.charcoal;
+        border = Border.all(color: AppTheme.charcoal, width: 1.5);
+        break;
+      default:
+        bg = AppTheme.pureWhite;
+        fg = AppTheme.midGray;
+        border = Border.all(color: AppTheme.midGray, width: 1.5);
+    }
+    return Container(
+      width: 34,
+      height: 34,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(color: bg, shape: BoxShape.circle, border: border),
+      child: Text(letter, style: TextStyle(color: fg, fontSize: 14, fontWeight: FontWeight.w700)),
+    );
+  }
+
+  Widget _row({required Widget leading, required String caption, required String value}) {
+    return Row(
+      children: [
+        SizedBox(width: 34, height: 34, child: Center(child: leading)),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(caption, style: const TextStyle(fontSize: 12.5, color: AppTheme.midGray)),
+              const SizedBox(height: 1),
+              Text(value, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final rows = <Widget>[
+      if (gradeLabel != null)
+        _row(
+          leading: _badge(gradeLetter ?? '-'),
+          caption: isArabic ? 'الحالة (Grade)' : 'Grade',
+          value: gradeLabel!,
+        ),
+      if (warrantyLabel != null)
+        _row(
+          leading: const Icon(Icons.verified_user_outlined, size: 26, color: AppTheme.gold),
+          caption: isArabic ? 'الضمان' : 'Warranty',
+          value: warrantyLabel!,
+        ),
+    ];
+    if (rows.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.offWhite,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.lightGray),
+      ),
+      child: Column(
+        children: [
+          for (var i = 0; i < rows.length; i++) ...[
+            if (i > 0) const Padding(padding: EdgeInsets.symmetric(vertical: 12), child: Divider(height: 1, color: AppTheme.lightGray)),
+            rows[i],
+          ],
+        ],
       ),
     );
   }

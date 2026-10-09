@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/customer_nav_actions.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/locale_provider.dart';
@@ -72,7 +73,7 @@ class _LoyaltyScreenState extends State<LoyaltyScreen> {
     final points = _points ?? 0;
 
     return Scaffold(
-      appBar: AppBar(title: Text(isArabic ? 'نقاط الولاء' : 'Loyalty Points')),
+      appBar: withCustomerNav(context, AppBar(title: Text(isArabic ? 'نقاط الولاء' : 'Loyalty Points'))),
       body: _points == null
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(

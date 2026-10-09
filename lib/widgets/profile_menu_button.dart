@@ -96,28 +96,24 @@ class _GuestAuthButtons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // نفس زراير الموقع (Pill شاركول من الثيم): Sign In = حدود، Sign Up = تعبئة.
+    // على الشاشات الضيقة أصغر شوية عشان يتّسعوا مع أيقونات الهيدر.
+    final narrow = MediaQuery.sizeOf(context).width < 520;
+    final padding = EdgeInsets.symmetric(horizontal: narrow ? 14 : 22, vertical: narrow ? 8 : 12);
+    final text = TextStyle(fontSize: narrow ? 13 : 14, fontWeight: FontWeight.w600);
+
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
         OutlinedButton(
           onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen())),
-          style: OutlinedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            minimumSize: Size.zero,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-          ),
+          style: OutlinedButton.styleFrom(padding: padding, minimumSize: Size.zero, textStyle: text),
           child: Text(isArabic ? 'دخول' : 'Sign In'),
         ),
-        const SizedBox(width: 8),
+        SizedBox(width: narrow ? 8 : 10),
         ElevatedButton(
           onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SignupScreen())),
-          style: ElevatedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            minimumSize: Size.zero,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-          ),
+          style: ElevatedButton.styleFrom(padding: padding, minimumSize: Size.zero, textStyle: text),
           child: Text(isArabic ? 'حساب جديد' : 'Sign Up'),
         ),
       ],

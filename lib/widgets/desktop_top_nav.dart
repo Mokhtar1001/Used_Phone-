@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../core/theme.dart';
 import '../core/responsive.dart';
 import 'modern_nav_bar.dart' show ModernNavItem;
@@ -41,18 +42,30 @@ class DesktopTopNav extends StatelessWidget implements PreferredSizeWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 32),
                 child: Row(
                   children: [
-                    // اللوجو
-                    const Text(
-                      'Merchnt',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
-                        color: AppTheme.charcoal,
-                        letterSpacing: -0.3,
+                    // اللوجو: ضغطة عليه ترجّع للصفحة الرئيسية
+                    InkWell(
+                      onTap: () => Navigator.of(context).popUntil((route) => route.isFirst),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            SvgPicture.asset('assets/images/merchnt_logo.svg', height: 40, width: 40), // vector: حاد على أي شاشة
+                            const SizedBox(width: 10),
+                            const Text(
+                              'MERCHNT',
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.charcoal,
+                                letterSpacing: -0.3,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Container(width: 6, height: 6, decoration: const BoxDecoration(color: AppTheme.gold, shape: BoxShape.circle)),
                     const SizedBox(width: 48),
                     // روابط النافيجيشن
                     ...List.generate(items.length, (i) {

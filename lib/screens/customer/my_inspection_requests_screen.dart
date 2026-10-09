@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/customer_nav_actions.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../providers/auth_provider.dart';
@@ -37,7 +38,7 @@ class _MyInspectionRequestsScreenState extends State<MyInspectionRequestsScreen>
     final isArabic = context.watch<LocaleProvider>().isArabic;
 
     return Scaffold(
-      appBar: AppBar(title: Text(isArabic ? 'طلبات الفحص الفني' : 'Inspection Requests')),
+      appBar: withCustomerNav(context, AppBar(title: Text(isArabic ? 'طلبات الفحص الفني' : 'Inspection Requests'))),
       body: RefreshIndicator(
         onRefresh: _load,
         child: _isLoading

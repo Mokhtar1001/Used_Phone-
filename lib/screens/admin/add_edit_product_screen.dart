@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -36,6 +37,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   final _brandController = TextEditingController();
   final _storageController = TextEditingController();
   final _colorController = TextEditingController();
+  final _warrantyController = TextEditingController(text: '3');
 
   String? _categoryId;
   String _condition = 'good';
@@ -70,6 +72,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       _colorController.text = product.color ?? '';
       _categoryId = product.categoryId;
       _condition = product.condition ?? 'good';
+      _warrantyController.text = product.warrantyMonths.toString();
       _existingImages = product.images;
     });
   }
@@ -120,6 +123,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       color: _colorController.text.trim(),
       status: 'available',
       createdAt: DateTime.now(),
+      warrantyMonths: int.tryParse(_warrantyController.text.trim()) ?? 3,
     );
 
     String productId;
@@ -227,6 +231,17 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                   DropdownMenuItem(value: 'fair', child: Text(isArabic ? 'مقبولة' : 'Fair')),
                 ],
                 onChanged: (v) => setState(() => _condition = v!),
+              ),
+              const SizedBox(height: 12),
+              // الضمان تحت الجريد: بالشهور (الافتراضي 3 شهور)
+              TextFormField(
+                controller: _warrantyController,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(2)],
+                decoration: InputDecoration(
+                  labelText: isArabic ? 'الضمان (بالشهور)' : 'Warranty (months)',
+                  suffixText: isArabic ? 'شهور' : 'months',
+                ),
               ),
               const SizedBox(height: 12),
               Row(

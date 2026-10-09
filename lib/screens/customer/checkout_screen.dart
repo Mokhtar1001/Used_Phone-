@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../widgets/customer_nav_actions.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../models/product.dart';
@@ -59,7 +60,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final isArabic = context.watch<LocaleProvider>().isArabic;
 
     return Scaffold(
-      appBar: AppBar(title: Text(isArabic ? 'إتمام الشراء' : 'Checkout')),
+      appBar: withCustomerNav(context, AppBar(title: Text(isArabic ? 'إتمام الشراء' : 'Checkout'))),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(

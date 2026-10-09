@@ -6,12 +6,14 @@ import '../../widgets/product_card.dart';
 import '../../core/theme.dart';
 import '../../core/responsive.dart';
 import '../../widgets/desktop_top_nav.dart';
-import '../../widgets/search_field.dart';
+import '../../widgets/search_with_suggestions.dart';
+import '../../widgets/customer_nav_actions.dart';
 import '../../widgets/profile_menu_button.dart';
 import 'product_details_screen.dart';
 import 'favorites_screen.dart';
 import 'notifications_screen.dart';
 import 'sell_phone_screen.dart';
+import 'search_results_screen.dart';
 // ⚠️ "محادثاتي" و"الإعدادات" متخفيين مؤقتًا (تابات + شريط النافيجيشن) بطلب الفريق.
 // لإرجاعهم: رجّع الاستيرادات دي وارجع الـ pages[]/navItems[]/ModernNavBar زي ما كانوا:
 // import '../../widgets/modern_nav_bar.dart';
@@ -56,21 +58,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final isArabic = context.watch<LocaleProvider>().isArabic;
     final isDesktop = Responsive.isDesktop(context);
 
-    final trailing = Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        TopNavIconButton(
-          icon: Icons.notifications_none_rounded,
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen())),
-        ),
-        TopNavIconButton(
-          icon: Icons.favorite_border,
-          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const FavoritesScreen())),
-        ),
-        const SizedBox(width: 6),
-        const ProfileMenuButton(),
-      ],
-    );
+    const trailing = CustomerNavActions();
 
     // شاشة ديسكتوب/ويب: نافيجيشن علوي (لوجو + أيقونات) - مفيش روابط تابات دلوقتي (تاب واحد بس)
     if (isDesktop) {
@@ -221,9 +209,14 @@ class _ProductsTabState extends State<_ProductsTab> {
         child: Row(
           children: [
             Expanded(
-              child: SearchField(
+              child: SearchWithSuggestions(
+                isArabic: isArabic,
                 hintText: isArabic ? 'ابحث عن موبايل...' : 'Search phones...',
-                onChanged: (v) => context.read<ProductProvider>().search(v),
+                // اختيار اسم موديل (أو Enter) -> صفحة نتايج الاسم ده من الداتابيز
+                onSelectName: (name) => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => SearchResultsScreen(query: name)),
+                ),
               ),
             ),
             const SizedBox(width: 10),
@@ -254,7 +247,8 @@ class _ProductsTabState extends State<_ProductsTab> {
   /// فلاتر Grade A / Grade B اتشالت من صف الفلاتر.
   Widget _buildBrowseSection(BuildContext context, ProductProvider productProvider) {
     Widget gridOrState() {
-      if (productProvider.isLoading) {
+      // أول تحميل بس: سبينر. بعد كده (بحث/فلتر) بنسيب النتايج القديمة ظاهرة لحد ما الجديدة توصل
+      if (productProvider.isLoading && productProvider.products.isEmpty) {
         return const SizedBox(height: 240, child: Center(child: CircularProgressIndicator()));
       }
       if (productProvider.hasError) {
@@ -286,13 +280,16 @@ class _ProductsTabState extends State<_ProductsTab> {
       return LayoutBuilder(
         builder: (context, constraints) {
           final columns = Responsive.productGridColumns(constraints.maxWidth);
-          return GridView.builder(
+          return AnimatedOpacity(
+            duration: const Duration(milliseconds: 150),
+            opacity: productProvider.isLoading ? 0.5 : 1,
+            child: GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             padding: EdgeInsets.zero,
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: columns,
-              childAspectRatio: 0.68,
+              mainAxisExtent: ProductCard.gridExtent((constraints.maxWidth - 24 * (columns - 1)) / columns),
               crossAxisSpacing: 24,
               mainAxisSpacing: 24,
             ),
@@ -308,6 +305,7 @@ class _ProductsTabState extends State<_ProductsTab> {
                 ),
               );
             },
+            ),
           );
         },
       );
@@ -400,6 +398,8 @@ class _ProductsTabState extends State<_ProductsTab> {
                         child: const Icon(Icons.favorite_border, size: 20),
                       ),
                     ),
+                    const SizedBox(width: 10),
+                    const CartNavButton(padding: 8, iconSize: 20, background: Color(0xFFF2F2F3), horizontalMargin: 0),
                     const SizedBox(width: 10),
                     const ProfileMenuButton(),
                   ],
