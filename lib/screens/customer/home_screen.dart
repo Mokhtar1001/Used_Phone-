@@ -32,6 +32,10 @@ const Color _midGray = Color(0xFF8C8A85);
 const Color _deepGray = Color(0xFF4A4846);
 const Color _border = Color(0xFFE5E3DF);
 
+/// لون خلفية مربع الأيقونة (غمّقه أو فتّحه من هنا).
+/// الأيقونة نفسها بتفضل زي ما هي، بس الأبيض بتاعها بياخد اللون ده.
+const Color _iconTileBg = Color(0xFFDDD9D0);
+
 TextStyle _t(double size, {FontWeight w = FontWeight.w400, Color? c, double? h, double? ls}) =>
     TextStyle(fontSize: size, fontWeight: w, color: c ?? AppTheme.charcoal, height: h, letterSpacing: ls);
 
@@ -598,6 +602,16 @@ class _Hero extends StatelessWidget {
         ),
         child: Stack(
           children: [
+            Positioned.fill(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(15),
+                child: Image.asset(
+                  'assets/images/phone.jpg',
+                  fit: BoxFit.cover,
+                  filterQuality: FilterQuality.high,
+                ),
+              ),
+            ),
             Positioned(
               top: 20,
               left: 20,
@@ -621,7 +635,6 @@ class _Hero extends StatelessWidget {
                 ),
               ),
             ),
-            const Center(child: _PhoneOutline(width: 108, height: 190)),
           ],
         ),
       ),
@@ -650,27 +663,6 @@ class _Hero extends StatelessWidget {
   }
 }
 
-class _PhoneOutline extends StatelessWidget {
-  final double width;
-  final double height;
-  const _PhoneOutline({required this.width, required this.height});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: width,
-      height: height,
-      decoration: BoxDecoration(
-        border: Border.all(color: AppTheme.lightGray, width: 4),
-        borderRadius: BorderRadius.circular(width * 0.17),
-      ),
-      alignment: Alignment.topCenter,
-      padding: EdgeInsets.only(top: height * 0.1),
-      child: Container(width: width * 0.6, height: 3, color: AppTheme.lightGray),
-    );
-  }
-}
-
 // ───────────────────────── Why MERCHNT ─────────────────────────
 
 class _WhyItem {
@@ -690,22 +682,26 @@ class _WhySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const items = [
+    final items = [
       _WhyItem(
         'Verified, not guessed',
         'Every phone is inspected and graded against the same honest standard, so you know its real condition before you buy.',
+        icon: Image.asset('assets/images/icon_verified.jpg', fit: BoxFit.cover),
       ),
       _WhyItem(
         'Real warranty, no exceptions',
         'Every device, regardless of grade, is backed by a real warranty — not a vague promise.',
+        icon: Image.asset('assets/images/icon_warranty.jpg', fit: BoxFit.cover),
       ),
       _WhyItem(
         'See us in person, buy online',
         "MERCHNT isn't an anonymous account — it's a business with real stores you can actually visit.",
+        icon: Image.asset('assets/images/icon_store.jpg', fit: BoxFit.cover),
       ),
       _WhyItem(
         'Fair prices, honestly set',
         'Flagship phones, without the flagship price — priced on real condition, not inflated guesswork.',
+        icon: Image.asset('assets/images/icon_price.jpg', fit: BoxFit.cover),
       ),
     ];
 
@@ -784,14 +780,17 @@ class _IconSlot extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: AppTheme.pureWhite,
+        color: _iconTileBg,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: _border),
       ),
       alignment: Alignment.center,
-      child: IconTheme(
-        data: IconThemeData(color: AppTheme.gold, size: 26),
-        child: SizedBox(width: 26, height: 26, child: icon),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(13),
+        child: ColorFiltered(
+          colorFilter: const ColorFilter.mode(_iconTileBg, BlendMode.multiply),
+          child: icon,
+        ),
       ),
     );
   }

@@ -8,6 +8,9 @@ import '../../services/product_service.dart';
 import '../../models/product.dart';
 import '../../models/category.dart';
 import '../../providers/locale_provider.dart';
+import '../../core/responsive.dart';
+import '../../widgets/desktop_top_nav.dart';
+import '../../widgets/profile_menu_button.dart';
 
 /// يخزن الملف المختار مع الـ bytes بتاعته مع بعض - عشان نقرأ الملف مرة واحدة بس
 /// ونستخدمه في المعاينة (Image.memory) والرفع، بطريقة شغالة على كل المنصات (موبايل وويب)
@@ -29,29 +32,64 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   final _formKey = GlobalKey<FormState>();
   final _service = ProductService();
 
-  final _nameArController = TextEditingController();
   final _nameEnController = TextEditingController();
-  final _descArController = TextEditingController();
   final _descEnController = TextEditingController();
   final _priceController = TextEditingController();
   final _brandController = TextEditingController();
   final _storageController = TextEditingController();
   final _colorController = TextEditingController();
   final _warrantyController = TextEditingController(text: '3');
+  final _batteryController = TextEditingController();
 
   String? _categoryId;
   String _condition = 'good';
   List<ProductCategory> _categories = [];
   List<String> _existingImages = [];
+  // صور قديمة الأدمن شالها - بتتمسح فعليًا لما يدوس حفظ
+  final List<String> _removedImages = [];
   final List<_PickedImage> _newImages = [];
   bool _isSaving = false;
   bool get _isEditing => widget.productId != null;
 
+  /// هل المنتج آيفون؟ (من القسم أو الماركة أو الاسم) - لو آيفون بنطلب نسبة البطارية
+  bool get _isIphone {
+    bool hit(String t) {
+      final v = t.toLowerCase();
+      return v.contains('iphone') || v.contains('apple') || v.contains('ايفون') || v.contains('آيفون') || v.contains('ابل') || v.contains('أبل');
+    }
+
+    for (final c in _categories) {
+      if (c.id == _categoryId && (hit(c.name(false)) || hit(c.name(true)))) return true;
+    }
+    return hit(_brandController.text) || hit(_nameEnController.text);
+  }
+
   @override
   void initState() {
     super.initState();
+    _brandController.addListener(_refresh);
+    _nameEnController.addListener(_refresh);
     _loadCategories();
     if (_isEditing) _loadProduct();
+  }
+
+  void _refresh() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _brandController.removeListener(_refresh);
+    _nameEnController.removeListener(_refresh);
+    _nameEnController.dispose();
+    _descEnController.dispose();
+    _priceController.dispose();
+    _brandController.dispose();
+    _storageController.dispose();
+    _colorController.dispose();
+    _warrantyController.dispose();
+    _batteryController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadCategories() async {
@@ -62,9 +100,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   Future<void> _loadProduct() async {
     final product = await _service.getProductById(widget.productId!);
     setState(() {
-      _nameArController.text = product.nameAr;
       _nameEnController.text = product.nameEn;
-      _descArController.text = product.descriptionAr ?? '';
       _descEnController.text = product.descriptionEn ?? '';
       _priceController.text = product.price.toString();
       _brandController.text = product.brand ?? '';
@@ -73,7 +109,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       _categoryId = product.categoryId;
       _condition = product.condition ?? 'good';
       _warrantyController.text = product.warrantyMonths.toString();
-      _existingImages = product.images;
+      _existingImages = List<String>.from(product.images);
+      _batteryController.text = product.batteryHealth?.toString() ?? '';
     });
   }
 
@@ -84,6 +121,17 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       final bytes = await picked.readAsBytes();
       setState(() => _newImages.add(_PickedImage(picked, bytes)));
     }
+  }
+
+  void _removeExistingImage(String url) {
+    setState(() {
+      _existingImages.remove(url);
+      _removedImages.add(url);
+    });
+  }
+
+  void _removeNewImage(_PickedImage img) {
+    setState(() => _newImages.remove(img));
   }
 
   Future<void> _save() async {
@@ -112,9 +160,10 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     final product = Product(
       id: '',
       categoryId: _categoryId,
-      nameAr: _nameArController.text.trim(),
+      // الأدمن بيدخل إنجليزي بس - بنكرره في الحقول العربي عشان الداتابيز/الشاشات القديمة تفضل شغالة
+      nameAr: _nameEnController.text.trim(),
       nameEn: _nameEnController.text.trim(),
-      descriptionAr: _descArController.text.trim(),
+      descriptionAr: _descEnController.text.trim(),
       descriptionEn: _descEnController.text.trim(),
       price: double.tryParse(_priceController.text) ?? 0,
       condition: _condition,
@@ -124,6 +173,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       status: 'available',
       createdAt: DateTime.now(),
       warrantyMonths: int.tryParse(_warrantyController.text.trim()) ?? 3,
+      batteryHealth: _isIphone ? int.tryParse(_batteryController.text.trim()) : null,
     );
 
     String productId;
@@ -132,6 +182,10 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       await _service.updateProduct(productId, product);
     } else {
       productId = await _service.createProduct(product);
+    }
+
+    for (final url in _removedImages) {
+      await _service.deleteProductImageByUrl(productId, url);
     }
 
     for (final image in _newImages) {
@@ -146,62 +200,80 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   Widget build(BuildContext context) {
     final isArabic = context.watch<LocaleProvider>().isArabic;
 
+    final title = _isEditing ? (isArabic ? 'تعديل منتج' : 'Edit Product') : (isArabic ? 'إضافة منتج' : 'Add Product');
+    final isDesktop = Responsive.isDesktop(context);
+
+    // نافيجيشن علوي على الديسكتوب/الويب (زي باقي الصفحات)، وAppBar عادي على الموبايل
+    final PreferredSizeWidget appBar = isDesktop
+        ? DesktopTopNav(
+            selectedIndex: 0,
+            onDestinationSelected: (_) {},
+            items: const [],
+            trailing: const Row(mainAxisSize: MainAxisSize.min, children: [ProfileMenuButton()]),
+          )
+        : AppBar(title: Text(title));
+
     return Scaffold(
-      appBar: AppBar(title: Text(_isEditing ? (isArabic ? 'تعديل منتج' : 'Edit Product') : (isArabic ? 'إضافة منتج' : 'Add Product'))),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // الصور
-              SizedBox(
-                height: 100,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  children: [
-                    ..._existingImages.map((url) => Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: CachedNetworkImage(imageUrl: url, width: 100, height: 100, fit: BoxFit.cover),
-                          ),
-                        )),
-                    ..._newImages.map((img) => Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.memory(img.bytes, width: 100, height: 100, fit: BoxFit.cover),
-                          ),
-                        )),
-                    InkWell(
-                      onTap: _pickImage,
-                      child: Container(
-                        width: 100,
-                        height: 100,
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(Icons.add_a_photo_outlined),
+      appBar: appBar,
+      body: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 760),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (isDesktop)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Row(
+                        children: [
+                          IconButton(onPressed: () => Navigator.maybePop(context), icon: const Icon(Icons.arrow_back)),
+                          const SizedBox(width: 8),
+                          Text(title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700)),
+                        ],
                       ),
                     ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _nameArController,
-                decoration: InputDecoration(labelText: isArabic ? 'اسم المنتج (عربي)' : 'Product Name (Arabic)'),
-                validator: (v) => (v == null || v.isEmpty) ? (isArabic ? 'مطلوب' : 'Required') : null,
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _nameEnController,
-                decoration: InputDecoration(labelText: isArabic ? 'اسم المنتج (إنجليزي)' : 'Product Name (English)'),
-                validator: (v) => (v == null || v.isEmpty) ? (isArabic ? 'مطلوب' : 'Required') : null,
-              ),
+                  // الصور
+                  SizedBox(
+                    height: 100,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      children: [
+                        ..._existingImages.map((url) => _imageTile(
+                              image: CachedNetworkImage(imageUrl: url, width: 100, height: 100, fit: BoxFit.cover),
+                              onRemove: () => _removeExistingImage(url),
+                              isArabic: isArabic,
+                            )),
+                        ..._newImages.map((img) => _imageTile(
+                              image: Image.memory(img.bytes, width: 100, height: 100, fit: BoxFit.cover),
+                              onRemove: () => _removeNewImage(img),
+                              isArabic: isArabic,
+                            )),
+                        InkWell(
+                          onTap: _pickImage,
+                          child: Container(
+                            width: 100,
+                            height: 100,
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.add_a_photo_outlined),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _nameEnController,
+                    decoration: InputDecoration(labelText: isArabic ? 'اسم المنتج' : 'Product Name'),
+                    validator: (v) => (v == null || v.trim().isEmpty) ? (isArabic ? 'مطلوب' : 'Required') : null,
+                  ),
               const SizedBox(height: 12),
               TextFormField(
                 controller: _priceController,
@@ -253,17 +325,31 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
               ),
               const SizedBox(height: 12),
               TextFormField(controller: _colorController, decoration: InputDecoration(labelText: isArabic ? 'اللون' : 'Color')),
-              const SizedBox(height: 12),
-              TextFormField(
-                controller: _descArController,
-                maxLines: 3,
-                decoration: InputDecoration(labelText: isArabic ? 'الوصف (عربي)' : 'Description (Arabic)'),
-              ),
+              // اختبار إضافي للآيفون: نسبة صحة البطارية
+              if (_isIphone) ...[
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _batteryController,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(3)],
+                  decoration: InputDecoration(
+                    labelText: isArabic ? 'نسبة البطارية (Battery Health)' : 'Battery Health',
+                    suffixText: '%',
+                    prefixIcon: const Icon(Icons.battery_charging_full_outlined),
+                  ),
+                  validator: (v) {
+                    final n = int.tryParse(v ?? '');
+                    if (n == null) return isArabic ? 'اكتب نسبة البطارية' : 'Enter battery health';
+                    if (n < 1 || n > 100) return isArabic ? 'من 1 إلى 100' : 'Must be 1-100';
+                    return null;
+                  },
+                ),
+              ],
               const SizedBox(height: 12),
               TextFormField(
                 controller: _descEnController,
                 maxLines: 3,
-                decoration: InputDecoration(labelText: isArabic ? 'الوصف (إنجليزي)' : 'Description (English)'),
+                decoration: InputDecoration(labelText: isArabic ? 'الوصف' : 'Description'),
               ),
               const SizedBox(height: 24),
               ElevatedButton(
@@ -273,8 +359,38 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                     : Text(isArabic ? 'حفظ' : 'Save'),
               ),
             ],
+            ),
           ),
         ),
+      ),
+    ),
+  );
+  }
+
+  /// صورة مصغّرة بزرار X صغير لحذفها
+  Widget _imageTile({required Widget image, required VoidCallback onRemove, required bool isArabic}) {
+    return Padding(
+      padding: const EdgeInsetsDirectional.only(end: 8),
+      child: Stack(
+        children: [
+          ClipRRect(borderRadius: BorderRadius.circular(8), child: image),
+          PositionedDirectional(
+            top: 4,
+            end: 4,
+            child: Tooltip(
+              message: isArabic ? 'حذف الصورة' : 'Remove image',
+              child: InkWell(
+                onTap: onRemove,
+                customBorder: const CircleBorder(),
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                  child: const Icon(Icons.close, size: 16, color: Colors.white),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

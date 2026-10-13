@@ -19,6 +19,9 @@ class Product {
   /// مدة الضمان بالشهور (الافتراضي 3 شهور)
   final int warrantyMonths;
 
+  /// نسبة صحة البطارية % (للآيفون بس)
+  final int? batteryHealth;
+
   Product({
     required this.id,
     this.categoryId,
@@ -37,6 +40,7 @@ class Product {
     this.viewsCount = 0,
     this.images = const [],
     this.warrantyMonths = 3,
+    this.batteryHealth,
   });
 
   String name(bool isArabic) => isArabic ? nameAr : nameEn;
@@ -105,6 +109,7 @@ class Product {
       viewsCount: json['views_count'] ?? 0,
       images: images,
       warrantyMonths: (json['warranty_months'] as num?)?.toInt() ?? 3,
+      batteryHealth: (json['battery_health'] as num?)?.toInt(),
     );
   }
 
@@ -121,5 +126,6 @@ class Product {
         'color': color,
         'status': status,
         'warranty_months': warrantyMonths,
+        if (batteryHealth != null) 'battery_health': batteryHealth,
       };
 }

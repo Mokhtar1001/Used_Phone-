@@ -193,4 +193,19 @@ class ProductService {
   Future<void> deleteProductImage(String imageId) async {
     await _client.from('product_images').delete().eq('id', imageId);
   }
+
+  /// يمسح صورة موجودة من المنتج عن طريق الرابط بتاعها (من الجدول ومن الـ Storage)
+  Future<void> deleteProductImageByUrl(String productId, String url) async {
+    await _client.from('product_images').delete().eq('product_id', productId).eq('image_url', url);
+    try {
+      final marker = '/${AppConstants.productImagesBucket}/';
+      final i = url.indexOf(marker);
+      if (i != -1) {
+        final path = Uri.decodeComponent(url.substring(i + marker.length).split('?').first);
+        await _client.storage.from(AppConstants.productImagesBucket).remove([path]);
+      }
+    } catch (_) {
+      // مسح الملف من الـ Storage اختياري - الصورة اتشالت من المنتج خلاص
+    }
+  }
 }

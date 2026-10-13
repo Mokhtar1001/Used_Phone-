@@ -362,6 +362,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
           gradeLetter: product.gradeLetter,
           gradeLabel: product.condition == null ? null : _conditionLabel(product.condition!, isArabic),
           warrantyLabel: product.warrantyMonths > 0 ? product.warrantyLabel(isArabic) : null,
+          batteryHealth: product.batteryHealth,
           isArabic: isArabic,
         ),
       ],
@@ -642,12 +643,14 @@ class _GradeWarrantyBlock extends StatelessWidget {
   final String? gradeLetter;
   final String? gradeLabel;
   final String? warrantyLabel;
+  final int? batteryHealth;
   final bool isArabic;
 
   const _GradeWarrantyBlock({
     required this.gradeLetter,
     required this.gradeLabel,
     required this.warrantyLabel,
+    this.batteryHealth,
     required this.isArabic,
   });
 
@@ -712,6 +715,12 @@ class _GradeWarrantyBlock extends StatelessWidget {
           leading: const Icon(Icons.verified_user_outlined, size: 26, color: AppTheme.gold),
           caption: isArabic ? 'الضمان' : 'Warranty',
           value: warrantyLabel!,
+        ),
+      if (batteryHealth != null)
+        _row(
+          leading: const Icon(Icons.battery_charging_full_outlined, size: 26, color: AppTheme.gold),
+          caption: isArabic ? 'صحة البطارية' : 'Battery health',
+          value: '$batteryHealth%',
         ),
     ];
     if (rows.isEmpty) return const SizedBox.shrink();
