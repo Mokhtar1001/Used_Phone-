@@ -22,7 +22,13 @@ class _RootScreenState extends State<RootScreen> {
   @override
   void initState() {
     super.initState();
-    _checkOnboarding();
+    // شاشات الترحيب (Onboarding + Welcome) للتطبيق بس. على الموقع بنتخطاها خالص
+    // ومفيش داعي نقرا SharedPreferences ولا نستنى لودينج.
+    if (kIsWeb) {
+      _onboardingSeen = true;
+    } else {
+      _checkOnboarding();
+    }
     VisitService().logVisit(); // بتتسجل مرة واحدة بس لكل فتحة للتطبيق/الموقع
   }
 
@@ -41,13 +47,12 @@ class _RootScreenState extends State<RootScreen> {
     }
 
     if (!auth.isLoggedIn || auth.profile == null) {
-      // على الويب بس: اسمح بتصفح المنتجات من غير ما نجبره يسجل دخول -
-      // الأكشنز اللي محتاجة حساب (مفضلة/شات/شراء) بتطلب تسجيل دخول لحظة ما يستخدمها بس
-      if (kIsWeb && !auth.isLoggedIn && _onboardingSeen!) {
-        return const HomeScreen();
-      }
+      // على الموقع (Web): من غير شاشات ترحيب خالص - الزائر يدخل على الرئيسية ويتصفح المنتجات،
+      // والأكشنز اللي محتاجة حساب (مفضلة/معاينة/شراء) بتطلب تسجيل دخول لحظة ما يستخدمها بس
+      if (kIsWeb) return const HomeScreen();
 
-      // أول مرة يفتح التطبيق -> يشوف شاشات الترحيب المتحركة، وبعدها كل مرة يروح على طول لشاشة تسجيل الدخول
+      // التطبيق بس: أول مرة يفتح التطبيق -> يشوف شاشات الترحيب المتحركة،
+      // وبعدها كل مرة يروح على طول لشاشة تسجيل الدخول
       return _onboardingSeen!
           ? const WelcomeScreen()
           : OnboardingScreen(onFinished: () => setState(() => _onboardingSeen = true));

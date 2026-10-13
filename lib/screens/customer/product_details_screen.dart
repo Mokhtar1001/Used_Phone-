@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import '../../widgets/customer_nav_actions.dart';
 import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:intl/intl.dart';
 import '../../services/product_service.dart';
-import '../../services/inspection_service.dart';
 import '../../services/favorites_service.dart';
 import '../../services/reviews_service.dart';
 import '../../models/product.dart';
@@ -14,7 +14,9 @@ import '../../providers/auth_provider.dart';
 import '../../widgets/guest_guard.dart';
 import '../../core/theme.dart';
 import '../../core/responsive.dart';
+import 'book_store_visit_sheet.dart';
 import 'checkout_screen.dart';
+import 'my_inspection_requests_screen.dart';
 
 class ProductDetailsScreen extends StatefulWidget {
   final String productId;
@@ -26,7 +28,6 @@ class ProductDetailsScreen extends StatefulWidget {
 
 class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   final _productService = ProductService();
-  final _inspectionService = InspectionService();
   final _favoritesService = FavoritesService();
   final _reviewsService = ReviewsService();
 
@@ -34,7 +35,6 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   List<Review> _reviews = [];
   double? _avgRating;
   bool _isFavorite = false;
-  bool _isRequestingInspection = false;
   bool _hasError = false;
   bool _viewCounted = false;
 
@@ -89,45 +89,46 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     if (mounted) setState(() => _isFavorite = newState);
   }
 
-  /// "معاينة في المحل": بيسجّل طلب فحص للمنتج ده (نفس نظام طلبات الفحص الموجود) والأدمن بيتواصل مع العميل.
+  /// "معاينة في المحل": العميل بيختار ميعاد (يوم + وقت) وممكن يطلب نحجزله التليفون لحد ما يجي،
+  /// والأدمن بيأكد الميعاد من لوحة التحكم.
   /// ⚠️ الشات مخفي مؤقتًا. لإرجاعه: رجّع ChatService/ChatScreen وزرار "شات عن هذا المنتج" من تاريخ git.
   Future<void> _requestInspection() async {
     if (!await requireLogin(
       context,
-      messageAr: 'محتاج تسجل دخول عشان تطلب معاينة في المحل',
-      messageEn: 'You need to log in to request an in-store inspection',
+      messageAr: 'محتاج تسجل دخول عشان تحجز معاينة في المحل',
+      messageEn: 'You need to log in to book a store visit',
     )) return;
     if (!mounted) return;
 
-    final customerId = context.read<AuthProvider>().profile?.id;
-    if (customerId == null) return;
+    final product = _product;
+    if (product == null) return;
     final isArabic = context.read<LocaleProvider>().isArabic;
 
-    setState(() => _isRequestingInspection = true);
-    try {
-      await _inspectionService.createRequest(productId: widget.productId, customerId: customerId);
-      if (!mounted) return;
-      await showDialog<void>(
-        context: context,
-        builder: (c) => AlertDialog(
-          icon: const Icon(Icons.check_circle_outline, size: 40, color: AppTheme.successColor),
-          content: Text(
-            isArabic
-                ? 'تم إرسال طلب المعاينة! هنتواصل معاك لتحديد ميعاد في المحل.'
-                : "Inspection request sent! We'll contact you to arrange a time at the store.",
-            textAlign: TextAlign.center,
-          ),
-          actions: [TextButton(onPressed: () => Navigator.pop(c), child: Text(isArabic ? 'تمام' : 'OK'))],
+    final booked = await showBookStoreVisitSheet(context, product);
+    if (booked == null || !mounted) return;
+
+    final locale = isArabic ? 'ar' : 'en';
+    final visitTime = DateFormat('EEEE d MMM · h:mm a', locale).format(booked.at);
+
+    final openVisits = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        icon: const Icon(Icons.check_circle_outline, size: 40, color: AppTheme.successColor),
+        content: Text(
+          isArabic
+              ? 'تم إرسال طلب الميعاد: $visitTime.\nهنأكدلك قريب${booked.hold ? ' وهنحاول نحجزلك التليفون لمدة 24 ساعة' : ''}.'
+              : 'Visit requested for $visitTime.\nWe\'ll confirm shortly${booked.hold ? " and try to hold the phone for you for 24 hours" : ''}.',
+          textAlign: TextAlign.center,
         ),
-      );
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(isArabic ? 'حصل خطأ، حاول تاني' : 'Something went wrong, please try again')),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isRequestingInspection = false);
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(c, true), child: Text(isArabic ? 'مواعيدي' : 'My visits')),
+          TextButton(onPressed: () => Navigator.pop(c, false), child: Text(isArabic ? 'تمام' : 'OK')),
+        ],
+      ),
+    );
+
+    if (openVisits == true && mounted) {
+      Navigator.push(context, MaterialPageRoute(builder: (_) => const MyInspectionRequestsScreen()));
     }
   }
 
@@ -443,12 +444,10 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
         Expanded(
           flex: 2,
           child: ElevatedButton.icon(
-            onPressed: (sold || _isRequestingInspection) ? null : _requestInspection,
-            icon: _isRequestingInspection
-                ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                : const Icon(Icons.storefront_outlined, size: 18),
+            onPressed: sold ? null : _requestInspection,
+            icon: const Icon(Icons.storefront_outlined, size: 18),
             label: Text(
-              isArabic ? 'معاينة في المحل' : 'Inspection in the store',
+              isArabic ? 'احجز معاينة في المحل' : 'Book a store visit',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -535,7 +534,7 @@ class _ImageGalleryState extends State<_ImageGallery> {
       );
     }
 
-    final isRtl = Directionality.of(context) == TextDirection.rtl;
+    final isRtl = Directionality.of(context) == TextDirection.RTL;
     final canGoPrev = _index > 0;
     final canGoNext = _index < images.length - 1;
     final showControls = widget.showArrows && images.length > 1;

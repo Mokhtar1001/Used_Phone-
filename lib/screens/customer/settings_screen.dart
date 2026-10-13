@@ -74,7 +74,7 @@ class SettingsScreen extends StatelessWidget {
                 const Divider(height: 1),
                 _SettingsTile(
                   icon: Icons.fact_check_outlined,
-                  text: isArabic ? 'طلبات الفحص الفني' : 'Inspection Requests',
+                  text: isArabic ? 'مواعيد المعاينة' : 'Store Visits',
                   onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const MyInspectionRequestsScreen())),
                 ),
               ],

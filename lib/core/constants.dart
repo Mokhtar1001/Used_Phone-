@@ -16,6 +16,16 @@ class AppConstants {
   static const statusReserved = 'reserved';
   static const statusSold = 'sold';
 
+  // معاينة في المحل (Store visits) - عدّل المواعيد دي حسب مواعيد شغل المحل
+  static const storeOpenHour = 11; // أول ميعاد بيبدأ الساعة كام
+  static const storeCloseHour = 21; // المحل بيقفل الساعة كام (آخر ميعاد بيبدأ قبلها بمدة slot)
+  static const visitSlotMinutes = 30; // مدة الميعاد الواحد بالدقايق
+  static const visitMinLeadHours = 1; // أقل مدة بين دلوقتي والميعاد
+  static const visitMaxDaysAhead = 14; // أقصى عدد أيام قدام ينفع يتحجز فيها
+  static const storeClosedWeekdays = <int>{}; // أيام الإجازة، مثال: {DateTime.friday}
+  // أقصى مدة لحجز التليفون للعميل (لأنه ممكن يتباع في المحل). لازم تتطابق مع 24 ساعة في migration_store_visits.sql
+  static const holdHours = 48;
+
   // Shared prefs keys
   static const prefThemeMode = 'theme_mode';
   static const prefLocale = 'locale';

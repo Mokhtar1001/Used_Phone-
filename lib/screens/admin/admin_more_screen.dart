@@ -26,8 +26,8 @@ class AdminMoreScreen extends StatelessWidget {
           const SizedBox(height: 12),
           _ToolCard(
             icon: Icons.fact_check_outlined,
-            title: isArabic ? 'طلبات الفحص الفني' : 'Inspection Requests',
-            subtitle: isArabic ? 'رد على طلبات فحص الأجهزة من العملاء' : 'Respond to customer device inspection requests',
+            title: isArabic ? 'مواعيد المعاينة' : 'Store Visits',
+            subtitle: isArabic ? 'أكّد مواعيد العملاء واحجزلهم التليفونات' : 'Confirm customer visits and hold phones for them',
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const InspectionRequestsAdminScreen())),
           ),
         ],

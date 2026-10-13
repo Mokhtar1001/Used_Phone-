@@ -130,8 +130,8 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                         _AlertCard(
                           icon: Icons.fact_check_outlined,
                           text: isArabic
-                              ? '$_pendingInspections طلب فحص فني محتاج رد'
-                              : '$_pendingInspections inspection request(s) awaiting reply',
+                              ? '$_pendingInspections ميعاد معاينة محتاج تأكيد'
+                              : '$_pendingInspections store visit(s) awaiting confirmation',
                           onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const InspectionRequestsAdminScreen())),
                         ),
                     ],
@@ -210,7 +210,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                     ),
                     _QuickAction(
                       icon: Icons.fact_check_outlined,
-                      label: isArabic ? 'طلبات الفحص' : 'Inspections',
+                      label: isArabic ? 'مواعيد المعاينة' : 'Store Visits',
                       badgeCount: _pendingInspections,
                       onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const InspectionRequestsAdminScreen())),
                     ),

@@ -57,7 +57,11 @@ class AppTheme {
   // H3 18/SemiBold, Body Large 17/Reg, Body 15/Reg, Body Small 13/Reg, Caption 11/Medium.
   // الأوزان المسموحة بس: Regular(400) / Medium(500) / SemiBold(600) / Bold(700).
   static TextTheme _typeScale(bool isArabic, Color primaryText) {
-    final base = isArabic ? GoogleFonts.tajawalTextTheme() : GoogleFonts.interTextTheme();
+    // الإنجليزي: Inter من ملفات الخط المحلية (assets/fonts) - من غير تحميل من النت.
+    // العربي: Tajawal من Google Fonts زي ما كان.
+    final base = isArabic
+        ? GoogleFonts.tajawalTextTheme()
+        : Typography.englishLike2021.apply(fontFamily: _interFamily);
 
     return base.copyWith(
       displayLarge: base.displayLarge?.copyWith(
@@ -85,12 +89,16 @@ class AppTheme {
     );
   }
 
+  /// اسم عيلة الخط المعرّفة في pubspec.yaml (قسم fonts)
+  static const _interFamily = 'Inter';
+
   static String? _fontFamily(bool isArabic) =>
-      isArabic ? GoogleFonts.tajawal().fontFamily : GoogleFonts.inter().fontFamily;
+      isArabic ? GoogleFonts.tajawal().fontFamily : _interFamily;
 
   // ======================= Light theme =======================
   static ThemeData light({bool isArabic = false}) => ThemeData(
         useMaterial3: true,
+        fontFamily: isArabic ? null : _interFamily,
         brightness: Brightness.light,
         scaffoldBackgroundColor: pureWhite,
         primaryColor: charcoal,
@@ -231,6 +239,7 @@ class AppTheme {
   // ======================= Dark theme =======================
   static ThemeData dark({bool isArabic = false}) => ThemeData(
         useMaterial3: true,
+        fontFamily: isArabic ? null : _interFamily,
         brightness: Brightness.dark,
         scaffoldBackgroundColor: darkBg,
         primaryColor: gold,
