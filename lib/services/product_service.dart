@@ -55,6 +55,7 @@ class ProductService {
     double? minPrice,
     double? maxPrice,
     String? condition,
+    int? minRamGb,
   }) async {
     var query = _client.from('products').select('*, product_images(*)');
 
@@ -72,6 +73,9 @@ class ProductService {
     }
     if (condition != null) {
       query = query.eq('condition', condition);
+    }
+    if (minRamGb != null) {
+      query = query.gte('ram_gb', minRamGb);
     }
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
       query = query.or(_orFilter(searchQuery.trim()));

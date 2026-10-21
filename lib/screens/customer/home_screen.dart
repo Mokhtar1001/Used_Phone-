@@ -107,6 +107,7 @@ class _ProductsTabState extends State<_ProductsTab> {
     final minController = TextEditingController(text: provider.minPrice?.toStringAsFixed(0) ?? '');
     final maxController = TextEditingController(text: provider.maxPrice?.toStringAsFixed(0) ?? '');
     String? selectedCondition = provider.condition;
+    int? selectedMinRam = provider.minRamGb;
 
     showModalBottomSheet(
       context: context,
@@ -174,21 +175,51 @@ class _ProductsTabState extends State<_ProductsTab> {
                 );
               },
             ),
+            const SizedBox(height: 24),
+            Text(isArabic ? 'الرام (RAM)' : 'RAM', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 4),
+            Text(
+              isArabic ? 'الحد الأدنى للرام (أجهزة سامسونج)' : 'Minimum RAM (Samsung phones)',
+              style: const TextStyle(fontSize: 12),
+            ),
+            const SizedBox(height: 12),
+            StatefulBuilder(
+              builder: (context, setSheetState) {
+                return Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _GradeChip(
+                      label: isArabic ? 'الكل' : 'Any',
+                      selected: selectedMinRam == null,
+                      onTap: () => setSheetState(() => selectedMinRam = null),
+                    ),
+                    for (final gb in const [4, 6, 8, 12, 16])
+                      _GradeChip(
+                        label: '$gb GB+',
+                        selected: selectedMinRam == gb,
+                        onTap: () => setSheetState(() => selectedMinRam = gb),
+                      ),
+                  ],
+                );
+              },
+            ),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () {
-                final min = double.tryParse(minController.text);
-                final max = double.tryParse(maxController.text);
-                context.read<ProductProvider>().setPriceRange(min, max);
-                context.read<ProductProvider>().setCondition(selectedCondition);
+                context.read<ProductProvider>().applyFilters(
+                      minPrice: double.tryParse(minController.text),
+                      maxPrice: double.tryParse(maxController.text),
+                      condition: selectedCondition,
+                      minRamGb: selectedMinRam,
+                    );
                 Navigator.pop(context);
               },
               child: Text(isArabic ? 'تطبيق' : 'Apply'),
             ),
             TextButton(
               onPressed: () {
-                context.read<ProductProvider>().setPriceRange(null, null);
-                context.read<ProductProvider>().setCondition(null);
+                context.read<ProductProvider>().clearFilters();
                 Navigator.pop(context);
               },
               child: Text(isArabic ? 'مسح الفلتر' : 'Clear filter'),
@@ -234,7 +265,7 @@ class _ProductsTabState extends State<_ProductsTab> {
                 ),
                 child: Icon(
                   Icons.tune,
-                  color: (productProvider.minPrice != null || productProvider.maxPrice != null || productProvider.condition != null)
+                  color: productProvider.hasActiveFilters
                       ? AppTheme.gold
                       : Colors.white,
                   size: 20,

@@ -11,6 +11,7 @@ import '../../providers/locale_provider.dart';
 import '../../core/responsive.dart';
 import '../../widgets/desktop_top_nav.dart';
 import '../../widgets/profile_menu_button.dart';
+import '../../widgets/overview_editor.dart';
 
 /// يخزن الملف المختار مع الـ bytes بتاعته مع بعض - عشان نقرأ الملف مرة واحدة بس
 /// ونستخدمه في المعاينة (Image.memory) والرفع، بطريقة شغالة على كل المنصات (موبايل وويب)
@@ -40,6 +41,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   final _colorController = TextEditingController();
   final _warrantyController = TextEditingController(text: '3');
   final _batteryController = TextEditingController();
+  final _ramController = TextEditingController();
+  final _overviewController = OverviewEditorController();
 
   String? _categoryId;
   String _condition = 'good';
@@ -56,6 +59,19 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     bool hit(String t) {
       final v = t.toLowerCase();
       return v.contains('iphone') || v.contains('apple') || v.contains('ايفون') || v.contains('آيفون') || v.contains('ابل') || v.contains('أبل');
+    }
+
+    for (final c in _categories) {
+      if (c.id == _categoryId && (hit(c.name(false)) || hit(c.name(true)))) return true;
+    }
+    return hit(_brandController.text) || hit(_nameEnController.text);
+  }
+
+  /// هل المنتج سامسونج؟ (من القسم أو الماركة أو الاسم) - لو سامسونج بنطلب الرام
+  bool get _isSamsung {
+    bool hit(String t) {
+      final v = t.toLowerCase();
+      return v.contains('samsung') || v.contains('galaxy') || v.contains('سامسونج') || v.contains('سامسونغ') || v.contains('جالاكسي') || v.contains('جلاكسي');
     }
 
     for (final c in _categories) {
@@ -89,6 +105,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     _colorController.dispose();
     _warrantyController.dispose();
     _batteryController.dispose();
+    _ramController.dispose();
+    _overviewController.dispose();
     super.dispose();
   }
 
@@ -111,6 +129,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       _warrantyController.text = product.warrantyMonths.toString();
       _existingImages = List<String>.from(product.images);
       _batteryController.text = product.batteryHealth?.toString() ?? '';
+      _ramController.text = product.ramGb?.toString() ?? '';
+      _overviewController.load(product.overview);
     });
   }
 
@@ -174,26 +194,36 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       createdAt: DateTime.now(),
       warrantyMonths: int.tryParse(_warrantyController.text.trim()) ?? 3,
       batteryHealth: _isIphone ? int.tryParse(_batteryController.text.trim()) : null,
+      ramGb: _isSamsung ? int.tryParse(_ramController.text.trim()) : null,
+      overview: _overviewController.build(),
     );
 
-    String productId;
-    if (_isEditing) {
-      productId = widget.productId!;
-      await _service.updateProduct(productId, product);
-    } else {
-      productId = await _service.createProduct(product);
-    }
+    try {
+      String productId;
+      if (_isEditing) {
+        productId = widget.productId!;
+        await _service.updateProduct(productId, product);
+      } else {
+        productId = await _service.createProduct(product);
+      }
 
-    for (final url in _removedImages) {
-      await _service.deleteProductImageByUrl(productId, url);
-    }
+      for (final url in _removedImages) {
+        await _service.deleteProductImageByUrl(productId, url);
+      }
 
-    for (final image in _newImages) {
-      await _service.uploadProductImage(productId, image.file);
-    }
+      for (final image in _newImages) {
+        await _service.uploadProductImage(productId, image.file);
+      }
 
-    setState(() => _isSaving = false);
-    if (mounted) Navigator.pop(context);
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(isArabic ? 'حصل خطأ أثناء الحفظ: $e' : 'Failed to save: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
   @override
@@ -345,11 +375,43 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                   },
                 ),
               ],
+              // سامسونج: الرام بالجيجا
+              if (_isSamsung) ...[
+                const SizedBox(height: 12),
+                TextFormField(
+                  controller: _ramController,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(2)],
+                  decoration: InputDecoration(
+                    labelText: isArabic ? 'الرام (RAM)' : 'RAM',
+                    suffixText: 'GB',
+                    prefixIcon: const Icon(Icons.memory),
+                  ),
+                  validator: (v) {
+                    final n = int.tryParse(v ?? '');
+                    if (n == null) return isArabic ? 'اكتب حجم الرام' : 'Enter RAM size';
+                    if (n < 1 || n > 64) return isArabic ? 'من 1 إلى 64' : 'Must be 1-64';
+                    return null;
+                  },
+                ),
+              ],
               const SizedBox(height: 12),
               TextFormField(
                 controller: _descEnController,
                 maxLines: 3,
                 decoration: InputDecoration(labelText: isArabic ? 'الوصف' : 'Description'),
+              ),
+              const SizedBox(height: 12),
+              // الـ Overview: بيظهر في صفحة المنتج على الجنب (مش ثابت، كل منتج بتكتبله بتاعه)
+              Card(
+                margin: EdgeInsets.zero,
+                child: ExpansionTile(
+                  maintainState: true,
+                  leading: const Icon(Icons.article_outlined),
+                  title: Text(isArabic ? 'Overview (نظرة عامة)' : 'Overview'),
+                  childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  children: [OverviewEditor(controller: _overviewController, isArabic: isArabic)],
+                ),
               ),
               const SizedBox(height: 24),
               ElevatedButton(

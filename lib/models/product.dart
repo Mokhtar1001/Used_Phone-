@@ -1,3 +1,5 @@
+import 'product_overview.dart';
+
 class Product {
   final String id;
   final String? categoryId;
@@ -22,6 +24,12 @@ class Product {
   /// نسبة صحة البطارية % (للآيفون بس)
   final int? batteryHealth;
 
+  /// الرام بالجيجا (لسامسونج بس)
+  final int? ramGb;
+
+  /// الـ Overview اللي الأدمن بيكتبه للمنتج (اختياري)
+  final ProductOverview? overview;
+
   Product({
     required this.id,
     this.categoryId,
@@ -41,6 +49,8 @@ class Product {
     this.images = const [],
     this.warrantyMonths = 3,
     this.batteryHealth,
+    this.ramGb,
+    this.overview,
   });
 
   String name(bool isArabic) => isArabic ? nameAr : nameEn;
@@ -110,6 +120,8 @@ class Product {
       images: images,
       warrantyMonths: (json['warranty_months'] as num?)?.toInt() ?? 3,
       batteryHealth: (json['battery_health'] as num?)?.toInt(),
+      ramGb: (json['ram_gb'] as num?)?.toInt(),
+      overview: ProductOverview.fromJson(json['overview']),
     );
   }
 
@@ -126,6 +138,9 @@ class Product {
         'color': color,
         'status': status,
         'warranty_months': warrantyMonths,
-        if (batteryHealth != null) 'battery_health': batteryHealth,
+        // بنبعتهم دايمًا (حتى لو null) عشان لو الأدمن غيّر نوع المنتج أو مسح القيمة، القيمة القديمة تتصفّر
+        'battery_health': batteryHealth,
+        'ram_gb': ramGb,
+        'overview': overview?.toJson(),
       };
 }

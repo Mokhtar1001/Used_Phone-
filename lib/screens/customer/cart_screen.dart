@@ -233,7 +233,9 @@ class _CartItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final spec = [product.storage, product.color].where((e) => e != null && e.isNotEmpty).join(' · ');
+    final spec = [product.storage, product.ramGb != null ? '${product.ramGb}GB RAM' : null, product.color]
+        .where((e) => e != null && e.isNotEmpty)
+        .join(' · ');
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),

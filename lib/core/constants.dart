@@ -23,8 +23,8 @@ class AppConstants {
   static const visitMinLeadHours = 1; // أقل مدة بين دلوقتي والميعاد
   static const visitMaxDaysAhead = 14; // أقصى عدد أيام قدام ينفع يتحجز فيها
   static const storeClosedWeekdays = <int>{}; // أيام الإجازة، مثال: {DateTime.friday}
-  // أقصى مدة لحجز التليفون للعميل (لأنه ممكن يتباع في المحل). لازم تتطابق مع 24 ساعة في migration_store_visits.sql
-  static const holdHours = 48;
+  // أقصى مدة لحجز التليفون للعميل (لأنه ممكن يتباع في المحل). لازم تتطابق مع interval '24 hours' في migration_store_visits.sql
+  static const holdHours = 24;
 
   // Shared prefs keys
   static const prefThemeMode = 'theme_mode';

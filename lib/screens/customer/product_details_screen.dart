@@ -6,14 +6,14 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
 import '../../services/product_service.dart';
 import '../../services/favorites_service.dart';
-import '../../services/reviews_service.dart';
 import '../../models/product.dart';
-import '../../models/review.dart';
+import '../../models/product_overview.dart';
 import '../../providers/locale_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/guest_guard.dart';
 import '../../core/theme.dart';
 import '../../core/responsive.dart';
+import '../../core/constants.dart';
 import 'book_store_visit_sheet.dart';
 import 'checkout_screen.dart';
 import 'my_inspection_requests_screen.dart';
@@ -29,11 +29,8 @@ class ProductDetailsScreen extends StatefulWidget {
 class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   final _productService = ProductService();
   final _favoritesService = FavoritesService();
-  final _reviewsService = ReviewsService();
 
   Product? _product;
-  List<Review> _reviews = [];
-  double? _avgRating;
   bool _isFavorite = false;
   bool _hasError = false;
   bool _viewCounted = false;
@@ -48,8 +45,6 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     setState(() => _hasError = false);
     try {
       final product = await _productService.getProductById(widget.productId);
-      final reviews = await _reviewsService.getProductReviews(widget.productId);
-      final avg = await _reviewsService.getAverageRating(widget.productId);
 
       final userId = context.read<AuthProvider>().profile?.id;
       bool isFav = false;
@@ -66,8 +61,6 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
 
       setState(() {
         _product = product;
-        _reviews = reviews;
-        _avgRating = avg;
         _isFavorite = isFav;
       });
     } catch (e) {
@@ -116,8 +109,8 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
         icon: const Icon(Icons.check_circle_outline, size: 40, color: AppTheme.successColor),
         content: Text(
           isArabic
-              ? 'تم إرسال طلب الميعاد: $visitTime.\nهنأكدلك قريب${booked.hold ? ' وهنحاول نحجزلك التليفون لمدة 24 ساعة' : ''}.'
-              : 'Visit requested for $visitTime.\nWe\'ll confirm shortly${booked.hold ? " and try to hold the phone for you for 24 hours" : ''}.',
+              ? 'تم إرسال طلب الميعاد: $visitTime.\nهنأكدلك قريب${booked.hold ? ' وهنحاول نحجزلك التليفون لمدة ${AppConstants.holdHours} ساعة' : ''}.'
+              : 'Visit requested for $visitTime.\nWe\'ll confirm shortly${booked.hold ? " and try to hold the phone for you for ${AppConstants.holdHours} hours" : ''}.',
           textAlign: TextAlign.center,
         ),
         actions: [
@@ -130,59 +123,6 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     if (openVisits == true && mounted) {
       Navigator.push(context, MaterialPageRoute(builder: (_) => const MyInspectionRequestsScreen()));
     }
-  }
-
-  void _showReviewDialog() {
-    final isArabic = context.read<LocaleProvider>().isArabic;
-    int rating = 5;
-    final commentController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: Text(isArabic ? 'قيّم المنتج' : 'Rate this product'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(5, (i) => IconButton(
-                      icon: Icon(i < rating ? Icons.star : Icons.star_border, color: const Color(0xFFFFC107)),
-                      onPressed: () => setDialogState(() => rating = i + 1),
-                    )),
-              ),
-              TextField(
-                controller: commentController,
-                decoration: InputDecoration(hintText: isArabic ? 'تعليق (اختياري)' : 'Comment (optional)'),
-                maxLines: 2,
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: Text(isArabic ? 'إلغاء' : 'Cancel')),
-            TextButton(
-              onPressed: () async {
-                final customerId = context.read<AuthProvider>().profile?.id;
-                if (customerId != null) {
-                  await _reviewsService.addOrUpdateReview(
-                    productId: widget.productId,
-                    customerId: customerId,
-                    rating: rating,
-                    comment: commentController.text.trim().isEmpty ? null : commentController.text.trim(),
-                  );
-                  if (context.mounted) {
-                    Navigator.pop(context);
-                    _load();
-                  }
-                }
-              },
-              child: Text(isArabic ? 'إرسال' : 'Submit'),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   @override
@@ -216,8 +156,9 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
 
     final product = _product!;
     final isDesktop = Responsive.isDesktop(context);
+    final overview = product.overview;
 
-    // ───────── موبايل/تطبيق: نفس الشكل القديم (صور بالسحب + بار سفلي) ─────────
+    // ───────── موبايل/تطبيق: صور بالسحب + التفاصيل + الـ Overview تحت + بار سفلي ─────────
     final mobileBody = RefreshIndicator(
       onRefresh: _load,
       child: SingleChildScrollView(
@@ -234,8 +175,10 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
                   _buildHeaderInfo(product, isArabic),
                   const SizedBox(height: 20),
                   _buildDescription(product, isArabic),
-                  const SizedBox(height: 24),
-                  _buildReviews(isArabic),
+                  if (overview != null) ...[
+                    const SizedBox(height: 24),
+                    _OverviewPanel(overview: overview, isArabic: isArabic),
+                  ],
                   const SizedBox(height: 100),
                 ],
               ),
@@ -245,7 +188,11 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
       ),
     );
 
-    // ───────── ويب/ديسكتوب: عمودين - الصور بسهم من الجنب + التفاصيل والأزرار جنبها ─────────
+    // ───────── ويب/ديسكتوب: 3 أجزاء ─────────
+    // [الصور] [بيانات التليفون: الاسم/السعر/المساحة/الأزرار/الوصف] [Overview]
+    // لو العرض أقل من 1200 الـ Overview بينزل تحت الجزأين بعرض كامل.
+    final threeColumns = overview != null && MediaQuery.sizeOf(context).width >= 1200;
+
     final desktopBody = RefreshIndicator(
       onRefresh: _load,
       child: SingleChildScrollView(
@@ -255,36 +202,47 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
             constraints: const BoxConstraints(maxWidth: Responsive.maxContentWidth),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 32),
-              child: Row(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    flex: 5,
-                    child: _ImageGallery(
-                      images: product.images,
-                      height: 540,
-                      showArrows: true,
-                      fit: BoxFit.contain,
-                      framed: true,
-                    ),
-                  ),
-                  const SizedBox(width: 56),
-                  Expanded(
-                    flex: 5,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildHeaderInfo(product, isArabic),
-                        const SizedBox(height: 24),
-                        _buildActions(product, isArabic),
-                        const SizedBox(height: 28),
-                        _buildDescription(product, isArabic),
-                        const SizedBox(height: 28),
-                        _buildReviews(isArabic),
-                        const SizedBox(height: 40),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        flex: 5,
+                        child: _ImageGallery(
+                          images: product.images,
+                          height: 540,
+                          showArrows: true,
+                          fit: BoxFit.contain,
+                          framed: true,
+                        ),
+                      ),
+                      SizedBox(width: threeColumns ? 40 : 56),
+                      Expanded(
+                        flex: 5,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildHeaderInfo(product, isArabic),
+                            const SizedBox(height: 24),
+                            _buildActions(product, isArabic),
+                            const SizedBox(height: 28),
+                            _buildDescription(product, isArabic),
+                          ],
+                        ),
+                      ),
+                      if (threeColumns) ...[
+                        const SizedBox(width: 40),
+                        Expanded(flex: 4, child: _OverviewPanel(overview: overview!, isArabic: isArabic)),
                       ],
-                    ),
+                    ],
                   ),
+                  if (overview != null && !threeColumns) ...[
+                    const SizedBox(height: 32),
+                    _OverviewPanel(overview: overview, isArabic: isArabic),
+                  ],
+                  const SizedBox(height: 40),
                 ],
               ),
             ),
@@ -340,12 +298,6 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
               '${product.price.toStringAsFixed(0)} ${isArabic ? 'ج.م' : 'EGP'}',
               style: TextStyle(fontSize: 20, color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600),
             ),
-            if (_avgRating != null) ...[
-              const SizedBox(width: 12),
-              const Icon(Icons.star, size: 18, color: Color(0xFFFFC107)),
-              const SizedBox(width: 2),
-              Text('${_avgRating!.toStringAsFixed(1)} (${_reviews.length})'),
-            ],
           ],
         ),
         const SizedBox(height: 16),
@@ -355,6 +307,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
           children: [
             if (product.brand != null && product.brand!.isNotEmpty) _InfoChip(icon: Icons.branding_watermark, label: product.brand!),
             if (product.storage != null && product.storage!.isNotEmpty) _InfoChip(icon: Icons.sd_storage, label: product.storage!),
+            if (product.ramGb != null) _InfoChip(icon: Icons.memory, label: '${product.ramGb} GB RAM'),
             if (product.color != null && product.color!.isNotEmpty) _InfoChip(icon: Icons.color_lens, label: product.color!),
           ],
         ),
@@ -377,48 +330,6 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
         Text(isArabic ? 'الوصف' : 'Description', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         const SizedBox(height: 8),
         Text(product.description(isArabic), style: const TextStyle(height: 1.5)),
-      ],
-    );
-  }
-
-  Widget _buildReviews(bool isArabic) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(isArabic ? 'التقييمات (${_reviews.length})' : 'Reviews (${_reviews.length})',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-            TextButton.icon(
-              onPressed: _showReviewDialog,
-              icon: const Icon(Icons.star_border, size: 18),
-              label: Text(isArabic ? 'قيّم' : 'Rate'),
-            ),
-          ],
-        ),
-        if (_reviews.isEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Text(isArabic ? 'لا يوجد تقييمات بعد' : 'No reviews yet', style: TextStyle(color: Colors.grey.shade500)),
-          )
-        else
-          ..._reviews.map((r) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 6),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(r.customerName ?? (isArabic ? 'عميل' : 'Customer'), style: const TextStyle(fontWeight: FontWeight.w600)),
-                        const SizedBox(width: 6),
-                        ...List.generate(5, (i) => Icon(i < r.rating ? Icons.star : Icons.star_border, size: 13, color: const Color(0xFFFFC107))),
-                      ],
-                    ),
-                    if (r.comment != null) Text(r.comment!, style: TextStyle(color: Colors.grey.shade700)),
-                  ],
-                ),
-              )),
       ],
     );
   }
@@ -468,6 +379,66 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
       default:
         return condition;
     }
+  }
+}
+
+/// الـ Overview: بيتعرض من اللي الأدمن كتبه للمنتج (عنوان + مقدمة + أقسام + أسئلة شائعة).
+/// أي جزء فاضي بيتخطى من غير ما يسيب فراغ.
+class _OverviewPanel extends StatelessWidget {
+  final ProductOverview overview;
+  final bool isArabic;
+  const _OverviewPanel({required this.overview, required this.isArabic});
+
+  @override
+  Widget build(BuildContext context) {
+    final o = overview;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        border: Border.all(color: Theme.of(context).dividerColor),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(isArabic ? 'نظرة عامة' : 'Overview', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+          if (o.title.isNotEmpty) ...[
+            const SizedBox(height: 14),
+            Text(o.title, style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+          ],
+          if (o.intro.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(o.intro, style: const TextStyle(height: 1.55, color: AppTheme.deepGray)),
+          ],
+          for (final section in o.sections) ...[
+            const SizedBox(height: 20),
+            if (section.title.isNotEmpty)
+              Text(section.title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+            if (section.title.isNotEmpty && section.body.isNotEmpty) const SizedBox(height: 6),
+            if (section.body.isNotEmpty) Text(section.body, style: const TextStyle(height: 1.6)),
+          ],
+          if (o.faqs.isNotEmpty) ...[
+            const SizedBox(height: 24),
+            Divider(color: Theme.of(context).dividerColor),
+            const SizedBox(height: 16),
+            Text(
+              o.faqTitle.isNotEmpty ? o.faqTitle : (isArabic ? 'الأسئلة الشائعة' : 'FAQs'),
+              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+            ),
+            for (var i = 0; i < o.faqs.length; i++) ...[
+              const SizedBox(height: 14),
+              if (o.faqs[i].question.isNotEmpty)
+                Text('${i + 1}. ${o.faqs[i].question}', style: const TextStyle(fontWeight: FontWeight.w600, height: 1.4)),
+              if (o.faqs[i].answer.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(o.faqs[i].answer, style: const TextStyle(height: 1.6, color: AppTheme.deepGray)),
+              ],
+            ],
+          ],
+        ],
+      ),
+    );
   }
 }
 

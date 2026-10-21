@@ -27,6 +27,7 @@ class ProductListCard extends StatelessWidget {
     final parts = <String>[
       if (product.brand != null && product.brand!.isNotEmpty) product.brand!,
       if (product.storage != null && product.storage!.isNotEmpty) product.storage!,
+      if (product.ramGb != null) '${product.ramGb}GB RAM',
       if (product.color != null && product.color!.isNotEmpty) product.color!,
     ];
     return parts.join(' · ');

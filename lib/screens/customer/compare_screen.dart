@@ -73,6 +73,7 @@ class CompareScreen extends StatelessWidget {
                   _row(isArabic ? 'السعر' : 'Price', products.map((p) => '${p.price.toStringAsFixed(0)} ${isArabic ? 'ج.م' : 'EGP'}').toList()),
                   _row(isArabic ? 'الماركة' : 'Brand', products.map((p) => p.brand ?? '-').toList()),
                   _row(isArabic ? 'التخزين' : 'Storage', products.map((p) => p.storage ?? '-').toList()),
+                  _row('RAM', products.map((p) => p.ramGb != null ? '${p.ramGb} GB' : '-').toList()),
                   _row(isArabic ? 'اللون' : 'Color', products.map((p) => p.color ?? '-').toList()),
                   _row(isArabic ? 'الحالة' : 'Condition', products.map((p) => _conditionLabel(p.condition, isArabic)).toList()),
                   _row(isArabic ? 'المشاهدات' : 'Views', products.map((p) => '${p.viewsCount}').toList()),

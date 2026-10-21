@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import '../../core/constants.dart';
 import '../../core/theme.dart';
 import '../../providers/locale_provider.dart';
 import '../../services/inspection_service.dart';
@@ -37,7 +38,7 @@ class _InspectionRequestsAdminScreenState extends State<InspectionRequestsAdminS
       _hasError = false;
     });
     try {
-      await _service.releaseExpiredHolds(); // يفك أي حجز عدّى 24 ساعة قبل ما نعرض القايمة
+      await _service.releaseExpiredHolds(); // يفك أي حجز عدّى مدته قبل ما نعرض القايمة
       final requests = await _service.getAllRequests();
       if (mounted) setState(() => _requests = requests);
     } catch (_) {
@@ -112,7 +113,7 @@ class _InspectionRequestsAdminScreenState extends State<InspectionRequestsAdminS
       target = fresh.first;
     }
 
-    // الحجز 24 ساعة بس: ينفع لو التليفون متاح (أو محجوز بالفعل للطلب ده) والميعاد خلال 24 ساعة
+    // الحجز مدته محدودة (AppConstants.holdHours): ينفع لو التليفون متاح (أو محجوز بالفعل للطلب ده) والميعاد خلال مدة الحجز
     final inWindow = InspectionService.withinHoldWindow(target.scheduledAt);
     final canHold = (target.productHeld || target.productStatus == 'available') && inWindow;
     var hold = canHold && (target.holdRequested || target.productHeld);
@@ -137,10 +138,10 @@ class _InspectionRequestsAdminScreenState extends State<InspectionRequestsAdminS
                 title: Text(_t('احجز التليفون للعميل', 'Hold the phone for the customer')),
                 subtitle: Text(
                   !inWindow
-                      ? _t('الحجز بيستمر 24 ساعة بس، والميعاد أبعد من كده', 'Holds last 24 hours only and this visit is later')
+                      ? _t('الحجز بيستمر ${AppConstants.holdHours} ساعة بس، والميعاد أبعد من كده', 'Holds last ${AppConstants.holdHours} hours only and this visit is later')
                       : !canHold
                           ? _t('التليفون مش متاح للحجز دلوقتي', 'Phone is not available to hold')
-                          : '${target.holdRequested ? '${_t('العميل طلب الحجز', 'Customer asked for a hold')} • ' : ''}${_t('الحجز لمدة 24 ساعة', 'Hold lasts 24 hours')}',
+                          : '${target.holdRequested ? '${_t('العميل طلب الحجز', 'Customer asked for a hold')} • ' : ''}${_t('الحجز لمدة ${AppConstants.holdHours} ساعة', 'Hold lasts ${AppConstants.holdHours} hours')}',
                   style: const TextStyle(fontSize: 12),
                 ),
               ),
@@ -175,7 +176,7 @@ class _InspectionRequestsAdminScreenState extends State<InspectionRequestsAdminS
     await _run(() async {
       final released = await _service.rescheduleVisit(r, picked);
       return released
-          ? _t('تم تعديل الميعاد واتفك حجز التليفون (الحجز 24 ساعة بس)', 'Rescheduled. The phone hold was released (holds last 24 hours)')
+          ? _t('تم تعديل الميعاد واتفك حجز التليفون (الحجز ${AppConstants.holdHours} ساعة بس)', 'Rescheduled. The phone hold was released (holds last ${AppConstants.holdHours} hours)')
           : _t('تم تعديل الميعاد', 'Visit rescheduled');
     });
   }
@@ -185,11 +186,11 @@ class _InspectionRequestsAdminScreenState extends State<InspectionRequestsAdminS
       final ok = await _service.setHold(r, !r.productHeld);
       if (!ok) {
         return _t(
-          'مينفعش الحجز: التليفون مش متاح أو الميعاد بعد أكتر من 24 ساعة',
-          'Cannot hold: phone unavailable or the visit is more than 24 hours away',
+          'مينفعش الحجز: التليفون مش متاح أو الميعاد بعد أكتر من ${AppConstants.holdHours} ساعة',
+          'Cannot hold: phone unavailable or the visit is more than ${AppConstants.holdHours} hours away',
         );
       }
-      return r.productHeld ? _t('تم فك الحجز', 'Hold released') : _t('تم حجز التليفون لمدة 24 ساعة', 'Phone held for 24 hours');
+      return r.productHeld ? _t('تم فك الحجز', 'Hold released') : _t('تم حجز التليفون لمدة ${AppConstants.holdHours} ساعة', 'Phone held for ${AppConstants.holdHours} hours');
     });
   }
 

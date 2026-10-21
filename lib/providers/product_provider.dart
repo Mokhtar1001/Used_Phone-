@@ -14,6 +14,7 @@ class ProductProvider extends ChangeNotifier {
   double? _minPrice;
   double? _maxPrice;
   String? _condition;
+  int? _minRamGb;
   bool _isLoading = false;
   bool _hasError = false;
 
@@ -26,6 +27,10 @@ class ProductProvider extends ChangeNotifier {
   double? get minPrice => _minPrice;
   double? get maxPrice => _maxPrice;
   String? get condition => _condition;
+  int? get minRamGb => _minRamGb;
+
+  /// فيه أي فلتر شغال؟ (للأيقونة)
+  bool get hasActiveFilters => _minPrice != null || _maxPrice != null || _condition != null || _minRamGb != null;
   bool get isLoading => _isLoading;
   bool get hasError => _hasError;
 
@@ -48,6 +53,7 @@ class ProductProvider extends ChangeNotifier {
         minPrice: _minPrice,
         maxPrice: _maxPrice,
         condition: _condition,
+        minRamGb: _minRamGb,
       );
       // لو فيه طلب أحدث اتبعت وإحنا مستنيين، رد الطلب ده قديم - نتجاهله
       if (requestId != _requestId) return;
@@ -59,6 +65,17 @@ class ProductProvider extends ChangeNotifier {
     _isLoading = false;
     notifyListeners();
   }
+
+  /// يطبّق كل الفلاتر مرة واحدة (طلب واحد للداتابيز بدل واحد لكل فلتر)
+  void applyFilters({double? minPrice, double? maxPrice, String? condition, int? minRamGb}) {
+    _minPrice = minPrice;
+    _maxPrice = maxPrice;
+    _condition = condition;
+    _minRamGb = minRamGb;
+    loadProducts();
+  }
+
+  void clearFilters() => applyFilters();
 
   void setPriceRange(double? min, double? max) {
     _minPrice = min;
