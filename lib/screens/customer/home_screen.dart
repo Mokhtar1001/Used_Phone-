@@ -9,6 +9,7 @@ import '../../widgets/desktop_top_nav.dart';
 import '../../widgets/search_with_suggestions.dart';
 import '../../widgets/customer_nav_actions.dart';
 import '../../widgets/profile_menu_button.dart';
+import '../../widgets/site_footer.dart';
 import 'product_details_screen.dart';
 import 'favorites_screen.dart';
 import 'notifications_screen.dart';
@@ -448,7 +449,7 @@ class _ProductsTabState extends State<_ProductsTab> {
             const _WhySection(),
             _buildBrowseSection(context, productProvider),
             const _GradingSection(),
-            const _Footer(),
+            const SiteFooter(),
           ],
         ),
       ),
@@ -985,69 +986,6 @@ class _DisclaimerBox extends StatelessWidget {
       child: narrow
           ? Column(children: [icon, const SizedBox(height: 14), text])
           : Row(children: [icon, const SizedBox(width: 20), Expanded(child: text)]),
-    );
-  }
-}
-
-// ───────────────────────── Footer ─────────────────────────
-
-class _Footer extends StatelessWidget {
-  const _Footer();
-
-  @override
-  Widget build(BuildContext context) {
-    const cols = {
-      'SHOP': ['All phones', 'iPhone', 'Samsung'],
-      'MERCHNT': ['Our grading system', 'Why MERCHNT', 'Sell your phone'],
-      'SUPPORT': ['Contact us', 'Warranty', 'Delivery & returns'],
-      'VISIT US': ['Store locations', 'Store hours'],
-    };
-
-    return Container(
-      width: double.infinity,
-      decoration: const BoxDecoration(border: Border(top: BorderSide(color: _border))),
-      padding: const EdgeInsets.fromLTRB(0, 48, 0, 32),
-      child: _Constrained(
-        child: Column(
-          children: [
-            Wrap(
-              alignment: WrapAlignment.spaceBetween,
-              spacing: 48,
-              runSpacing: 32,
-              children: [
-                for (final e in cols.entries)
-                  SizedBox(
-                    width: 180,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(e.key, style: _t(13, w: FontWeight.w700, c: _midGray, ls: 0.5)),
-                        const SizedBox(height: 14),
-                        for (final l in e.value)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: Text(l, style: _t(14.5, c: _deepGray)),
-                          ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 32),
-            const Divider(height: 1, color: _border),
-            const SizedBox(height: 24),
-            Wrap(
-              alignment: WrapAlignment.spaceBetween,
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                Text('© 2026 MERCHNT. All rights reserved.', style: _t(13, c: _midGray)),
-                Text('Trusted pre-owned phones — graded, verified, warrantied.', style: _t(13, c: _midGray)),
-              ],
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

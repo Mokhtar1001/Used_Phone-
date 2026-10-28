@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/profile.dart';
+import '../services/address_service.dart';
 import '../services/auth_service.dart';
 
 class AuthProvider extends ChangeNotifier {
@@ -40,6 +41,8 @@ class AuthProvider extends ChangeNotifier {
     _profile = await _authService.getCurrentProfile();
     _isLoading = false;
     notifyListeners();
+    // عنوان التسجيل (لو العميل كتبه) بينتقل لجدول العناوين أول ما يسجل دخول
+    if (_profile != null) AddressService().importPendingSignupAddress();
   }
 
   Future<void> refreshProfile() async {
@@ -61,6 +64,7 @@ class AuthProvider extends ChangeNotifier {
     required String password,
     required String fullName,
     required String phone,
+    Map<String, dynamic>? address,
   }) async {
     try {
       await _authService.signUp(
@@ -68,8 +72,20 @@ class AuthProvider extends ChangeNotifier {
         password: password,
         fullName: fullName,
         phone: phone,
+        address: address,
       );
       await _loadProfile();
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
+  }
+
+  /// بيبدأ تسجيل الدخول بجوجل. بيرجّع رسالة الخطأ لو فشل البدء.
+  /// الجلسة نفسها بتوصل بعدين من الـ auth listener (فيه _loadProfile).
+  Future<String?> signInWithGoogle() async {
+    try {
+      await _authService.signInWithGoogle();
       return null;
     } catch (e) {
       return e.toString();

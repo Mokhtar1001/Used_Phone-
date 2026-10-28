@@ -1,8 +1,10 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/locale_provider.dart';
 import '../screens/auth/login_screen.dart';
+import 'sign_in_dialog.dart';
 
 /// بيتأكد إن اليوزر مسجل دخول قبل تنفيذ أكشن معين (مفضلة / شات / شراء).
 /// لو Guest (زي وضع تصفح الويب من غير تسجيل دخول)، بيطلعله بوتوم شيت بسيط
@@ -64,6 +66,11 @@ Future<bool> requireLogin(
 
   if (wantsLogin != true || !context.mounted) return false;
 
-  await Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+  // على الموقع: بوب أب تسجيل الدخول. على التطبيق: شاشة اللوجين زي ما كانت
+  if (kIsWeb) {
+    await showSignInDialog(context);
+  } else {
+    await Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+  }
   return context.mounted && context.read<AuthProvider>().isLoggedIn;
 }

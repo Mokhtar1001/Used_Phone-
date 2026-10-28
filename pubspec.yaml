@@ -35,6 +35,10 @@ dependencies:
   flutter_svg: ^2.0.10+1
   fl_chart: ^0.69.0
 
+  # تصدير Excel
+  excel: ^4.0.6
+  web: ^1.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -57,3 +61,7 @@ flutter:
           weight: 600
         - asset: assets/fonts/Inter_700Bold.ttf
           weight: 700
+        - asset: assets/fonts/Inter_800ExtraBold.ttf
+          weight: 800
+        - asset: assets/fonts/Inter_900Black.ttf
+          weight: 900

@@ -1,3 +1,4 @@
+import 'condition_item.dart';
 import 'product_overview.dart';
 
 class Product {
@@ -30,6 +31,12 @@ class Product {
   /// الـ Overview اللي الأدمن بيكتبه للمنتج (اختياري)
   final ProductOverview? overview;
 
+  /// السعر الأصلي/قبل الخصم (بيظهر مشطوب جنب السعر لو أكبر من السعر الحالي)
+  final double? originalPrice;
+
+  /// تفاصيل الحالة: Screen / Back / Sides ... (الأدمن بيكتبها)
+  final List<ConditionItem> conditionBreakdown;
+
   Product({
     required this.id,
     this.categoryId,
@@ -51,6 +58,8 @@ class Product {
     this.batteryHealth,
     this.ramGb,
     this.overview,
+    this.originalPrice,
+    this.conditionBreakdown = const [],
   });
 
   String name(bool isArabic) => isArabic ? nameAr : nameEn;
@@ -122,6 +131,8 @@ class Product {
       batteryHealth: (json['battery_health'] as num?)?.toInt(),
       ramGb: (json['ram_gb'] as num?)?.toInt(),
       overview: ProductOverview.fromJson(json['overview']),
+      originalPrice: (json['original_price'] as num?)?.toDouble(),
+      conditionBreakdown: ConditionItem.listFromJson(json['condition_breakdown']),
     );
   }
 
@@ -142,5 +153,7 @@ class Product {
         'battery_health': batteryHealth,
         'ram_gb': ramGb,
         'overview': overview?.toJson(),
+        'original_price': originalPrice,
+        'condition_breakdown': conditionBreakdown.map((e) => e.toJson()).toList(),
       };
 }

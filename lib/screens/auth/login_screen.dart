@@ -5,6 +5,8 @@ import '../../providers/locale_provider.dart';
 import '../../core/theme.dart';
 import 'signup_screen.dart';
 import 'forgot_password_screen.dart';
+import '../../widgets/auth_widgets.dart';
+import '../../widgets/google_sign_in_button.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -129,6 +131,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: _isLoading
                           ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
                           : Text(isArabic ? 'تسجيل الدخول' : 'Log in'),
+                    ),
+                    AuthDivider(text: isArabic ? 'أو كمّل بـ' : 'or continue with'),
+                    GoogleSignInButton(
+                      isArabic: isArabic,
+                      onSignedIn: () => Navigator.of(context).popUntil((route) => route.isFirst),
+                      onError: (m) => setState(() => _error = m),
                     ),
                     const SizedBox(height: 16),
                     Row(

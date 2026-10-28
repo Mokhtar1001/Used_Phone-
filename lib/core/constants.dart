@@ -26,6 +26,11 @@ class AppConstants {
   // أقصى مدة لحجز التليفون للعميل (لأنه ممكن يتباع في المحل). لازم تتطابق مع interval '24 hours' في migration_store_visits.sql
   static const holdHours = 24;
 
+  // تسجيل الدخول بجوجل (Supabase OAuth). الـ scheme ده لازم يكون مضاف في:
+  //  - Supabase > Authentication > URL Configuration > Redirect URLs
+  //  - android/app/src/main/AndroidManifest.xml و ios/Runner/Info.plist (متضاف)
+  static const oauthRedirectUrl = 'io.supabase.merchnt://login-callback/';
+
   // Shared prefs keys
   static const prefThemeMode = 'theme_mode';
   static const prefLocale = 'locale';

@@ -12,6 +12,8 @@ import '../../core/responsive.dart';
 import '../../widgets/desktop_top_nav.dart';
 import '../../widgets/profile_menu_button.dart';
 import '../../widgets/overview_editor.dart';
+import '../../widgets/breakdown_editor.dart';
+import '../../models/condition_item.dart';
 
 /// يخزن الملف المختار مع الـ bytes بتاعته مع بعض - عشان نقرأ الملف مرة واحدة بس
 /// ونستخدمه في المعاينة (Image.memory) والرفع، بطريقة شغالة على كل المنصات (موبايل وويب)
@@ -36,6 +38,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   final _nameEnController = TextEditingController();
   final _descEnController = TextEditingController();
   final _priceController = TextEditingController();
+  final _originalPriceController = TextEditingController();
+  final _breakdownController = BreakdownEditorController();
   final _brandController = TextEditingController();
   final _storageController = TextEditingController();
   final _colorController = TextEditingController();
@@ -100,6 +104,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     _nameEnController.dispose();
     _descEnController.dispose();
     _priceController.dispose();
+    _originalPriceController.dispose();
+    _breakdownController.dispose();
     _brandController.dispose();
     _storageController.dispose();
     _colorController.dispose();
@@ -121,6 +127,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       _nameEnController.text = product.nameEn;
       _descEnController.text = product.descriptionEn ?? '';
       _priceController.text = product.price.toString();
+      _originalPriceController.text = product.originalPrice?.toString() ?? '';
+      _breakdownController.load(product.conditionBreakdown);
       _brandController.text = product.brand ?? '';
       _storageController.text = product.storage ?? '';
       _colorController.text = product.color ?? '';
@@ -196,6 +204,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       batteryHealth: _isIphone ? int.tryParse(_batteryController.text.trim()) : null,
       ramGb: _isSamsung ? int.tryParse(_ramController.text.trim()) : null,
       overview: _overviewController.build(),
+      originalPrice: double.tryParse(_originalPriceController.text.trim()),
+      conditionBreakdown: _breakdownController.build(),
     );
 
     try {
@@ -317,6 +327,21 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                 },
               ),
               const SizedBox(height: 12),
+              TextFormField(
+                controller: _originalPriceController,
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: isArabic ? 'السعر الأصلي قبل الخصم (اختياري)' : 'Original price (optional)',
+                  helperText: isArabic ? 'بيظهر مشطوب جنب السعر لو أكبر من السعر الحالي' : 'Shown crossed out next to the price when higher than the current price',
+                ),
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) return null;
+                  final parsed = double.tryParse(v);
+                  if (parsed == null || parsed <= 0) return isArabic ? 'سعر غير صحيح' : 'Invalid price';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 initialValue: _categoryId,
                 decoration: InputDecoration(labelText: isArabic ? 'اختر القسم' : 'Select Category'),
@@ -400,6 +425,18 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                 controller: _descEnController,
                 maxLines: 3,
                 decoration: InputDecoration(labelText: isArabic ? 'الوصف' : 'Description'),
+              ),
+              const SizedBox(height: 12),
+              // تفاصيل الحالة (Screen / Back / Sides ...): بتظهر في قسم Condition breakdown
+              Card(
+                margin: EdgeInsets.zero,
+                child: ExpansionTile(
+                  maintainState: true,
+                  leading: const Icon(Icons.fact_check_outlined),
+                  title: Text(isArabic ? 'تفاصيل الحالة' : 'Condition breakdown'),
+                  childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  children: [BreakdownEditor(controller: _breakdownController, isArabic: isArabic)],
+                ),
               ),
               const SizedBox(height: 12),
               // الـ Overview: بيظهر في صفحة المنتج على الجنب (مش ثابت، كل منتج بتكتبله بتاعه)

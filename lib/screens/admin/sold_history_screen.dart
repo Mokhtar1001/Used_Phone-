@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../services/product_service.dart';
+import '../../services/sales_export_service.dart';
 import '../../models/product.dart';
 import '../../providers/locale_provider.dart';
 import '../customer/product_details_screen.dart';
@@ -17,6 +19,7 @@ class _SoldHistoryScreenState extends State<SoldHistoryScreen> {
   final _productService = ProductService();
   List<Product> _products = [];
   bool _isLoading = true;
+  bool _exporting = false;
 
   @override
   void initState() {
@@ -31,6 +34,28 @@ class _SoldHistoryScreenState extends State<SoldHistoryScreen> {
       _products = products;
       _isLoading = false;
     });
+  }
+
+  /// تصدير المبيعات لملف Excel (تنزيل على الويب، مشاركة على الموبايل، حفظ في Downloads على الديسكتوب)
+  Future<void> _export(bool isArabic) async {
+    setState(() => _exporting = true);
+    try {
+      final path = await SalesExportService.exportToExcel(_products, isArabic: isArabic);
+      if (!mounted) return;
+      final message = path != null
+          ? (isArabic ? 'اتحفظ الملف في: $path' : 'Saved to: $path')
+          : (kIsWeb ? (isArabic ? 'تم تنزيل ملف Excel' : 'Excel file downloaded') : null);
+      if (message != null) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(isArabic ? 'فشل التصدير: $e' : 'Export failed: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _exporting = false);
+    }
   }
 
   @override
@@ -52,7 +77,9 @@ class _SoldHistoryScreenState extends State<SoldHistoryScreen> {
                         margin: const EdgeInsets.all(16),
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(color: const Color(0xFF1A1A1A), borderRadius: BorderRadius.circular(20)),
-                        child: Row(
+                        child: Column(
+                          children: [
+                        Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Column(
@@ -69,6 +96,23 @@ class _SoldHistoryScreenState extends State<SoldHistoryScreen> {
                                 Text(isArabic ? 'عدد القطع' : 'Items Sold', style: const TextStyle(color: Colors.white70, fontSize: 12)),
                                 Text('${_products.length}', style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
                               ],
+                            ),
+                          ],
+                        ),
+                            const SizedBox(height: 14),
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                onPressed: _exporting ? null : () => _export(isArabic),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.white,
+                                  side: const BorderSide(color: Colors.white54),
+                                ),
+                                icon: _exporting
+                                    ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                    : const Icon(Icons.file_download_outlined, size: 18),
+                                label: Text(isArabic ? 'تصدير إلى Excel' : 'Export to Excel'),
+                              ),
                             ),
                           ],
                         ),

@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../core/constants.dart';
 import '../models/profile.dart';
 
 class AuthService {
@@ -13,6 +15,7 @@ class AuthService {
     required String password,
     required String fullName,
     required String phone,
+    Map<String, dynamic>? address, // اختياري: بيتحفظ مؤقتًا لحد أول تسجيل دخول
   }) async {
     return await _client.auth.signUp(
       email: email,
@@ -21,6 +24,7 @@ class AuthService {
         'full_name': fullName,
         'phone': phone,
         'role': 'customer', // العميل العادي دايمًا، الأدمن بيتحدد يدويًا من الداتابيز
+        if (address != null) 'pending_address': address,
       },
     );
   }
@@ -32,6 +36,16 @@ class AuthService {
     return await _client.auth.signInWithPassword(
       email: email,
       password: password,
+    );
+  }
+
+  /// تسجيل الدخول بجوجل. على الويب بيحوّل الصفحة لجوجل وبيرجع لنفس العنوان،
+  /// وعلى التطبيق بيفتح المتصفح وبيرجع بـ deep link (AppConstants.oauthRedirectUrl).
+  Future<bool> signInWithGoogle() {
+    return _client.auth.signInWithOAuth(
+      OAuthProvider.google,
+      redirectTo: kIsWeb ? null : AppConstants.oauthRedirectUrl,
+      queryParams: {'prompt': 'select_account'},
     );
   }
 

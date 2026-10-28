@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/egypt_governorates.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -34,9 +35,53 @@ class _OrdersScreenState extends State<OrdersScreen> {
     });
   }
 
-  Future<void> _updateStatus(String orderId, String newStatus) async {
-    await _client.from('orders').update({'status': newStatus}).eq('id', orderId);
+  /// تغيير حالة الطلب + أثره على المنتج (الطلب بيحجز المنتج وقت الإنشاء):
+  /// - failed: نفك الحجز والمنتج يرجع متاح
+  /// - paid: المنتج يتعلّم "تم البيع" (وبيظهر في سجل المبيعات وشيت جوجل)
+  Future<void> _updateStatus(Map<String, dynamic> order, String newStatus) async {
+    await _client.from('orders').update({'status': newStatus}).eq('id', order['id']);
+
+    final productId = order['product_id'];
+    if (productId != null) {
+      try {
+        if (newStatus == 'failed') {
+          await _client.from('products').update({'status': 'available'}).eq('id', productId).eq('status', 'reserved');
+        } else if (newStatus == 'paid') {
+          await _client
+              .from('products')
+              .update({'status': 'sold', 'sold_at': DateTime.now().toUtc().toIso8601String()})
+              .eq('id', productId);
+        }
+      } catch (_) {
+        // الطلب اتحدّث؛ لو تحديث المنتج فشل الأدمن يعدّله يدوي من شاشة المنتجات
+      }
+    }
     _load();
+  }
+
+  /// عنوان الشحن المحفوظ مع الطلب (نسخة وقت الشراء)
+  String _addressLine(dynamic raw, bool isArabic) {
+    if (raw is! Map) return '';
+    final parts = [
+      raw['street'],
+      raw['building'],
+      raw['city'],
+      raw['governorate'] != null ? governorateLabel(raw['governorate'].toString(), isArabic) : null,
+    ].where((e) => e != null && e.toString().trim().isNotEmpty).map((e) => e.toString());
+    final line = parts.join('، ');
+    final landmark = raw['landmark']?.toString();
+    return (landmark != null && landmark.isNotEmpty) ? '$line (${isArabic ? 'علامة' : 'near'}: $landmark)' : line;
+  }
+
+  String _zoneLabel(String? zone, bool isArabic) {
+    switch (zone) {
+      case 'cairo':
+        return isArabic ? 'داخل القاهرة' : 'Inside Cairo';
+      case 'outside':
+        return isArabic ? 'خارج القاهرة' : 'Outside Cairo';
+      default:
+        return '';
+    }
   }
 
   Color _statusColor(String status) {
@@ -74,7 +119,26 @@ class _OrdersScreenState extends State<OrdersScreen> {
                         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                         child: ListTile(
                           title: Text(isArabic ? (product?['name_ar'] ?? '') : (product?['name_en'] ?? '')),
-                          subtitle: Text('${customer?['full_name'] ?? ''} • ${customer?['phone'] ?? ''}'),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('${customer?['full_name'] ?? ''} • ${customer?['phone'] ?? ''}'),
+                              if (order['delivery_zone'] != null)
+                                Text(
+                                  [
+                                    _zoneLabel(order['delivery_zone'] as String?, isArabic),
+                                    if (order['promo_code'] != null)
+                                      '${order['promo_code']} (−${NumberFormat.decimalPattern().format(order['discount_amount'] ?? 0)})',
+                                  ].where((e) => e.isNotEmpty).join(' • '),
+                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                                ),
+                              if (_addressLine(order['shipping_address'], isArabic).isNotEmpty)
+                                Text(
+                                  _addressLine(order['shipping_address'], isArabic),
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                            ],
+                          ),
                           trailing: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             crossAxisAlignment: CrossAxisAlignment.end,
@@ -86,7 +150,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
                               Container(
                                 margin: const EdgeInsets.only(top: 4),
                                 child: PopupMenuButton<String>(
-                                  onSelected: (v) => _updateStatus(order['id'], v),
+                                  onSelected: (v) => _updateStatus(order, v),
                                   itemBuilder: (context) => [
                                     PopupMenuItem(value: 'pending', child: Text(isArabic ? 'قيد الانتظار' : 'Pending')),
                                     PopupMenuItem(value: 'paid', child: Text(isArabic ? 'تم الدفع' : 'Paid')),
